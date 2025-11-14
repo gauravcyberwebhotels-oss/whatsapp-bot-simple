@@ -752,708 +752,795 @@
         </div>
     </div>
     <script>
-        // FIXED: API base - REPLACE WITH YOUR RENDER BACKEND URL
-        const API_BASE = 'https://my-whatsapp-brain.onrender.com';  // e.g., 'https://bot-1-ztr9.onrender.com'
+    // API Configuration - UPDATE THIS TO YOUR BACKEND URL
+    const API_BASE = 'https://my-whatsapp-brain.onrender.com';
 
-        // User data
-        let userSecretKey = '';
-        let userEmail = '';
-        let botStatusInterval = null;
-        let activityUpdateInterval = null;
+    // User data
+    let userSecretKey = '';
+    let userEmail = '';
+    let botStatusInterval = null;
+    let activityUpdateInterval = null;
 
-        // Authentication functions - FIXED with API_BASE
-        async function registerWithValidation() {
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-           
-            if (!email || !password) {
-                showStatus('Please enter both email and password', 'error');
-                return;
-            }
-            if (!isValidEmail(email)) {
-                showStatus('Please enter a valid email address', 'error');
-                return;
-            }
-            if (password.length < 6) {
-                showStatus('Password must be at least 6 characters long', 'error');
-                return;
-            }
-            await register();
+    // Authentication functions
+    async function registerWithValidation() {
+        const email = document.getElementById('registerEmail').value;
+        const password = document.getElementById('registerPassword').value;
+       
+        if (!email || !password) {
+            showStatus('Please enter both email and password', 'error');
+            return;
         }
-
-        async function register() {
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-           
-            showStatus('Creating your account...', 'loading');
-            try {
-                const response = await fetch(API_BASE + '/register', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({email, password})
-                });
-               
-                const result = await response.json();
-               
-                if (response.ok) {
-                    userSecretKey = result.secret_key;
-                    userEmail = email;
-                    showVerificationModal();
-                    showStatus('Registration successful! Check your email for verification code.', 'success');
-                } else {
-                    throw new Error(result.error || 'Registration failed');
-                }
-               
-            } catch (error) {
-                handleFetchError(error, 'registration');
-            }
+        if (!isValidEmail(email)) {
+            showStatus('Please enter a valid email address', 'error');
+            return;
         }
-
-        async function loginWithValidation() {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-           
-            if (!email || !password) {
-                showStatus('Please enter both email and password', 'error');
-                return;
-            }
-            if (!isValidEmail(email)) {
-                showStatus('Please enter a valid email address', 'error');
-                return;
-            }
-            await login();
+        if (password.length < 6) {
+            showStatus('Password must be at least 6 characters long', 'error');
+            return;
         }
+        
+        document.getElementById('status').style.display = 'none';
+        await register();
+    }
 
-        async function login() {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-           
-            showStatus('Logging in...', 'loading');
-            try {
-                const response = await fetch(API_BASE + '/login', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({email, password})
-                });
-               
-                const result = await response.json();
-               
-                if (response.ok) {
-                    userSecretKey = result.secret_key;
-                    userEmail = email;
-                    showDashboard();
-                    showStatus('Login successful!', 'success');
-                    loadUserProfile();
-                    loadUserActivity();
-                    startStatusMonitoring();
-                    saveUserSession();
-                } else {
-                    throw new Error(result.error || 'Login failed');
-                }
-               
-            } catch (error) {
-                handleFetchError(error, 'login');
-            }
+    async function register() {
+        const email = document.getElementById('registerEmail').value;
+        const password = document.getElementById('registerPassword').value;
+       
+        showStatus('Creating your account...', 'loading');
+        
+        const registerBtn = document.querySelector('#registerForm button[type="submit"]');
+        if (registerBtn) {
+            registerBtn.disabled = true;
+            registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> REGISTERING...';
         }
-
-        async function verifyEmail() {
-            const code = document.getElementById('verifyCode').value;
-           
-            if (!code) {
-                showStatus('Please enter verification code', 'error');
-                return;
-            }
-            showStatus('Verifying your email...', 'loading');
-            try {
-                const response = await fetch(API_BASE + '/verify', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({email: userEmail, code})
-                });
-               
-                const result = await response.json();
-               
-                if (response.ok) {
-                    hideVerificationModal();
-                    showDashboard();
-                    showStatus('Email verified successfully!', 'success');
-                    loadUserProfile();
-                } else {
-                    throw new Error(result.error || 'Verification failed');
-                }
-               
-            } catch (error) {
-                handleFetchError(error, 'verification');
-            }
-        }
-
-        async function saveSpreadsheet() {
-            const spreadsheetUrl = document.getElementById('spreadsheetUrl').value;
-           
-            if (!spreadsheetUrl) {
-                showStatus('Please enter your Google Sheet URL', 'error');
-                return;
-            }
-            if (!userSecretKey) {
-                showStatus('Please login first', 'error');
-                return;
-            }
-            const saveSheetBtn = document.getElementById('saveSheetBtn');
-            saveSheetBtn.disabled = true;
-            saveSheetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
-           
-            try {
-                const response = await fetch(API_BASE + '/save_spreadsheet', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        secret_key: userSecretKey,
-                        spreadsheet_url: spreadsheetUrl
-                    })
-                });
-               
-                const result = await response.json();
-               
-                if (response.ok) {
-                    showStatus('Spreadsheet URL saved successfully!', 'success');
-                    addBotLog('Spreadsheet saved successfully', 'success');
-                } else {
-                    throw new Error(result.error || 'Failed to save spreadsheet');
-                }
-               
-            } catch (error) {
-                handleFetchError(error, 'save spreadsheet');
-            } finally {
-                saveSheetBtn.disabled = false;
-                saveSheetBtn.innerHTML = '<i class="fas fa-save"></i> SAVE SPREADSHEET';
-            }
-        }
-
-        async function startBot() {
-            if (!userSecretKey) {
-                showStatus('Please login first', 'error');
-                return;
-            }
-            const startBtn = document.getElementById('startBtn');
-            const stopBtn = document.getElementById('stopBtn');
-           
-            startBtn.disabled = true;
-            startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> STARTING...';
-            showStatus('Starting your WhatsApp bot...', 'loading');
-           
-            // Show QR section
-            document.getElementById('qrSection').style.display = 'block';
-           
-            addBotLog('🚀 Starting WhatsApp Bot...', 'info');
-            addBotLog('📱 Please scan the QR code when it appears', 'warning');
-            addBotLog('⏳ Bot will start automatically after QR scan', 'info');
-            try {
-                const response = await fetch(API_BASE + '/start', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        secret_key: userSecretKey
-                    })
-                });
-               
-                const result = await response.json();
-               
-                if (response.ok) {
-                    showStatus('Bot started successfully! Running 24/7...', 'success');
-                    stopBtn.disabled = false;
-                   
-                    addBotLog('✅ Bot started successfully!', 'success');
-                    addBotLog('🔄 Bot is now running on: ' + result.assigned_server, 'info');
-                    addBotLog('📊 Processing your spreadsheet data...', 'info');
-                   
-                    // Simulate progress
-                    simulateBotProgress();
-                   
-                    updateBotStatus();
-                } else {
-                    throw new Error(result.error || 'Failed to start bot');
-                }
-               
-            } catch (error) {
-                handleFetchError(error, 'start bot');
-            } finally {
-                startBtn.disabled = false;
-                startBtn.innerHTML = '<i class="fas fa-play"></i> START BOT';
-            }
-        }
-
-        async function stopBot() {
-            if (!userSecretKey) {
-                showStatus('Please login first', 'error');
-                return;
-            }
-            const stopBtn = document.getElementById('stopBtn');
-            stopBtn.disabled = true;
-            stopBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> STOPPING...';
-            showStatus('Stopping your bot...', 'loading');
-           
-            addBotLog('🛑 Stopping bot...', 'warning');
-            try {
-                const response = await fetch(API_BASE + '/stop', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        secret_key: userSecretKey
-                    })
-                });
-               
-                const result = await response.json();
-               
-                if (response.ok) {
-                    showStatus('Bot stopped successfully!', 'success');
-                    addBotLog('✅ Bot stopped successfully!', 'success');
-                   
-                    // Hide QR section
-                    document.getElementById('qrSection').style.display = 'none';
-                   
-                    // Reset progress
-                    document.getElementById('progressFill').style.width = '0%';
-                   
-                    updateBotStatus();
-                } else {
-                    throw new Error(result.error || 'Failed to stop bot');
-                }
-               
-            } catch (error) {
-                handleFetchError(error, 'stop bot');
-            } finally {
-                stopBtn.disabled = false;
-                stopBtn.innerHTML = '<i class="fas fa-stop"></i> STOP BOT';
-            }
-        }
-
-        function simulateBotProgress() {
-            let progress = 0;
-            const progressBar = document.getElementById('progressFill');
-            const interval = setInterval(() => {
-                progress += Math.random() * 5;
-                if (progress >= 100) {
-                    progress = 100;
-                    clearInterval(interval);
-                    addBotLog('🎉 Bot completed processing all contacts!', 'success');
-                }
-                progressBar.style.width = progress + '%';
-            }, 1000);
-        }
-
-        function addBotLog(message, type = 'info') {
-            const logContainer = document.getElementById('botLog');
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = 'log-entry';
-            logEntry.innerHTML = `
-                <span class="log-time">[${timestamp}]</span>
-                <span class="log-${type}">${message}</span>
-            `;
-            logContainer.appendChild(logEntry);
-            logContainer.scrollTop = logContainer.scrollHeight;
-        }
-
-        async function loadUserProfile() {
-            if (!userSecretKey) return;
-           
-            try {
-                const response = await fetch(API_BASE + '/user/profile', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({secret_key: userSecretKey})
-                });
-               
-                const result = await response.json();
-               
-                if (response.ok) {
-                    document.getElementById('userEmail').textContent = result.email;
-                    document.getElementById('userCredits').textContent = result.credits;
-                    document.getElementById('userStatus').textContent = result.verified ? 'Verified ✅' : 'Not Verified ❌';
-                    document.getElementById('userSecretKey').textContent = userSecretKey;
-                   
-                    if (result.spreadsheet_url) {
-                        document.getElementById('spreadsheetUrl').value = result.spreadsheet_url;
-                    }
-                }
-            } catch (error) {
-                handleFetchError(error, 'load profile');
-            }
-        }
-
-        async function loadUserActivity() {
-            if (!userSecretKey) return;
-           
-            try {
-                const response = await fetch(API_BASE + '/user/activity', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({secret_key: userSecretKey})
-                });
-               
-                const result = await response.json();
-               
-                if (response.ok && result.user_data) {
-                    const userData = result.user_data;
-                   
-                    // Update stats cards
-                    document.getElementById('totalActivities').textContent = userData.activity_history ? userData.activity_history.length : 0;
-                    document.getElementById('filesUploaded').textContent = userData.files_uploaded ? userData.files_uploaded.length : 0;
-                    document.getElementById('botSessionsCount').textContent = userData.bot_sessions ? userData.bot_sessions.length : 0;
-                    document.getElementById('firstSeen').textContent = userData.first_seen ? new Date(userData.first_seen).toLocaleDateString() : '-';
-                   
-                    // Update activity history
-                    updateActivityHistory(userData.activity_history || []);
-                }
-            } catch (error) {
-                handleFetchError(error, 'load activity');
-            }
-        }
-
-        function updateActivityHistory(activities) {
-            const activityContainer = document.getElementById('activityHistory');
-            activityContainer.innerHTML = '';
-           
-            // Show latest 10 activities
-            const recentActivities = activities.slice(-10).reverse();
-           
-            recentActivities.forEach(activity => {
-                const activityItem = document.createElement('div');
-                activityItem.className = 'activity-item';
-               
-                const time = new Date(activity.timestamp).toLocaleString();
-                const type = activity.type.replace(/_/g, ' ').toUpperCase();
-               
-                activityItem.innerHTML = `
-                    <div class="activity-type">${type}</div>
-                    <div class="activity-time">${time}</div>
-                `;
-               
-                activityContainer.appendChild(activityItem);
-            });
-        }
-
-        async function updateBotStatus() {
-            if (!userSecretKey) return;
-           
-            try {
-                const response = await fetch(API_BASE + '/status', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({secret_key: userSecretKey})
-                });
-               
-                const result = await response.json();
-               
-                if (response.ok && result.status !== 'no_active_session') {
-                    document.getElementById('botStatusDisplay').textContent = result.status;
-                    document.getElementById('assignedServer').textContent = result.assigned_server;
-                    document.getElementById('startedAt').textContent = result.started_at;
-                    document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
-                   
-                    const stopBtn = document.getElementById('stopBtn');
-                    if (result.status === 'running') {
-                        stopBtn.disabled = false;
-                        document.getElementById('botStatusDisplay').innerHTML = '<span style="color: var(--success);">🟢 RUNNING (24/7)</span>';
-                        document.getElementById('qrSection').style.display = 'block';
-                    } else {
-                        stopBtn.disabled = true;
-                        document.getElementById('botStatusDisplay').innerHTML = '<span style="color: var(--danger);">🔴 STOPPED</span>';
-                        document.getElementById('qrSection').style.display = 'none';
-                    }
-                } else {
-                    document.getElementById('botStatusDisplay').innerHTML = '<span style="color: #6b7280;">⚪ NO ACTIVE SESSION</span>';
-                    document.getElementById('assignedServer').textContent = '-';
-                    document.getElementById('startedAt').textContent = '-';
-                    document.getElementById('stopBtn').disabled = true;
-                    document.getElementById('qrSection').style.display = 'none';
-                }
-            } catch (error) {
-                handleFetchError(error, 'update status');
-            }
-        }
-
-        function startStatusMonitoring() {
-            // Update bot status every 10 seconds
-            if (botStatusInterval) clearInterval(botStatusInterval);
-            botStatusInterval = setInterval(updateBotStatus, 10000);
-           
-            // Update activity every 30 seconds
-            if (activityUpdateInterval) clearInterval(activityUpdateInterval);
-            activityUpdateInterval = setInterval(loadUserActivity, 30000);
-           
-            // Update server status every minute
-            setInterval(checkServerStatus, 60000);
-        }
-
-        async function checkServerStatus() {
-            try {
-                const response = await fetch(API_BASE + '/server_status');
-                const result = await response.json();
-               
-                const serverStatusDiv = document.getElementById('serverStatus');
-                serverStatusDiv.innerHTML = '';
-               
-                let onlineServers = 0;
-               
-                for (const [server, status] of Object.entries(result.servers)) {
-                    const serverDiv = document.createElement('div');
-                    serverDiv.className = 'server-status';
-                   
-                    const statusDot = document.createElement('span');
-                    statusDot.className = status ? 'status-dot status-online' : 'status-dot status-offline';
-                    serverDiv.appendChild(statusDot);
-                   
-                    // Extract server name for display
-                    const serverName = server.split('//')[1].split('.')[0];
-                    serverDiv.innerHTML += `${serverName} - <span style="color: ${status ? 'var(--success)' : 'var(--danger)'};">${status ? 'ONLINE' : 'OFFLINE'}</span>`;
-                   
-                    serverStatusDiv.appendChild(serverDiv);
-                    if (status) onlineServers++;
-                }
-               
-                // Update online servers count
-                document.getElementById('serverCount').textContent = onlineServers;
-               
-            } catch (error) {
-                handleFetchError(error, 'server status');
-                // Fallback: show all servers as offline
-                document.getElementById('serverCount').textContent = '0';
-            }
-        }
-
-        async function updateStats() {
-            try {
-                const response = await fetch(API_BASE + '/stats');
-                if (response.ok) {
-                    const result = await response.json();
-                    document.getElementById('totalUsers').textContent = result.total_users || '0';
-                    document.getElementById('activeBots').textContent = result.active_bots || '0';
-                    document.getElementById('serverCount').textContent = result.server_count || '5';
-                }
-            } catch (error) {
-                handleFetchError(error, 'stats');
-                // Set default values
-                document.getElementById('totalUsers').textContent = '0';
-                document.getElementById('activeBots').textContent = '0';
-            }
-        }
-
-        // Helper functions
-        function showDashboard() {
-            document.getElementById('authSection').style.display = 'none';
-            document.getElementById('dashboardSection').style.display = 'block';
-        }
-
-        function showLogin() {
-            document.getElementById('registerForm').style.display = 'none';
-            document.getElementById('loginForm').style.display = 'block';
-        }
-
-        function showRegister() {
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'block';
-        }
-
-        function showVerificationModal() {
-            document.getElementById('verificationModal').style.display = 'flex';
-        }
-
-        function hideVerificationModal() {
-            document.getElementById('verificationModal').style.display = 'none';
-        }
-
-        function showBotStatusModal() {
-            document.getElementById('botStatusModal').style.display = 'flex';
-        }
-
-        function hideBotStatusModal() {
-            document.getElementById('botStatusModal').style.display = 'none';
-        }
-
-        function showStatus(message, type) {
-            const statusDiv = document.getElementById('status');
-            statusDiv.textContent = message;
-            statusDiv.className = `status status-${type}`;
-            statusDiv.style.display = 'block';
-           
-            // Auto-hide success messages after 5 seconds
-            if (type === 'success') {
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 5000);
-            }
-        }
-
-        function copySecretKey() {
-            if (!userSecretKey) {
-                showStatus('No secret key available', 'error');
-                return;
-            }
-           
-            navigator.clipboard.writeText(userSecretKey).then(() => {
-                showStatus('Secret key copied to clipboard!', 'success');
-            }).catch(() => {
-                showStatus('Failed to copy secret key', 'error');
-            });
-        }
-
-        function switchTab(tabName) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
+        
+        try {
+            const response = await fetch(API_BASE + '/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email, password})
             });
            
-            // Show selected tab
-            const targetTab = document.getElementById(tabName + 'Tab');
-            if (targetTab) {
-                targetTab.classList.add('active');
+            const result = await response.json();
+           
+            if (response.ok) {
+                userSecretKey = result.secret_key;
+                userEmail = email;
+                showVerificationModal();
+                showStatus('Registration successful! Check your email for verification code.', 'success');
+            } else {
+                throw new Error(result.error || result.message || `Registration failed with status ${response.status}`);
             }
            
-            // Activate the clicked tab
-            if (event && event.target) {
-                event.target.classList.add('active');
+        } catch (error) {
+            handleFetchError(error, 'registration');
+        } finally {
+            if (registerBtn) {
+                registerBtn.disabled = false;
+                registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> REGISTER';
             }
         }
+    }
 
-        function setupFormHandlers() {
-            // Login form
-            const loginForm = document.getElementById('loginForm');
-            if (loginForm) {
-                loginForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    loginWithValidation();
-                });
-            }
+    async function loginWithValidation() {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+       
+        if (!email || !password) {
+            showStatus('Please enter both email and password', 'error');
+            return;
+        }
+        if (!isValidEmail(email)) {
+            showStatus('Please enter a valid email address', 'error');
+            return;
+        }
+        
+        document.getElementById('status').style.display = 'none';
+        await login();
+    }
+
+    async function login() {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+       
+        showStatus('Logging in...', 'loading');
+        
+        const loginBtn = document.querySelector('#loginForm button[type="submit"]');
+        if (loginBtn) {
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> LOGGING IN...';
+        }
+        
+        try {
+            const response = await fetch(API_BASE + '/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email, password})
+            });
            
-            // Register form
-            const registerForm = document.getElementById('registerForm');
-            if (registerForm) {
-                registerForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    registerWithValidation();
-                });
-            }
+            const result = await response.json();
            
-            // Verification form
-            const verifyForm = document.querySelector('#verificationModal input');
-            if (verifyForm) {
-                verifyForm.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        verifyEmail();
-                    }
-                });
-            }
-           
-            // Spreadsheet form
-            const spreadsheetInput = document.getElementById('spreadsheetUrl');
-            if (spreadsheetInput) {
-                spreadsheetInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        saveSpreadsheet();
-                    }
-                });
-            }
-        }
-
-        function isValidEmail(email) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return emailRegex.test(email);
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return '-';
-            const date = new Date(dateString);
-            return date.toLocaleString();
-        }
-
-        function saveUserSession() {
-            if (userSecretKey && userEmail) {
-                localStorage.setItem('userSecretKey', userSecretKey);
-                localStorage.setItem('userEmail', userEmail);
-            }
-        }
-
-        function clearUserSession() {
-            localStorage.removeItem('userSecretKey');
-            localStorage.removeItem('userEmail');
-            userSecretKey = '';
-            userEmail = '';
-        }
-
-        function logout() {
-            clearUserSession();
-            document.getElementById('dashboardSection').style.display = 'none';
-            document.getElementById('authSection').style.display = 'block';
-            showLogin();
-            showStatus('Logged out successfully', 'success');
-           
-            // Clear any intervals
-            if (botStatusInterval) clearInterval(botStatusInterval);
-            if (activityUpdateInterval) clearInterval(activityUpdateInterval);
-        }
-
-        function handleFetchError(error, operation) {
-            console.error(`Error during ${operation}:`, error);
-            let msg = `Error: ${error.message}`;
-            if (error.message.includes('Unexpected token')) {
-                msg = 'Backend connection failed. Check if server is running.';
-            }
-            showStatus(msg, 'error');
-            addBotLog(`❌ ${operation} failed: ${error.message}`, 'error');
-        }
-
-        function checkExistingSession() {
-            const savedSecretKey = localStorage.getItem('userSecretKey');
-            const savedEmail = localStorage.getItem('userEmail');
-           
-            if (savedSecretKey && savedEmail) {
-                userSecretKey = savedSecretKey;
-                userEmail = savedEmail;
+            if (response.ok) {
+                userSecretKey = result.secret_key;
+                userEmail = email;
                 showDashboard();
+                showStatus('Login successful!', 'success');
                 loadUserProfile();
                 loadUserActivity();
                 startStatusMonitoring();
+                saveUserSession();
+            } else {
+                throw new Error(result.error || result.message || `Login failed with status ${response.status}`);
+            }
+           
+        } catch (error) {
+            handleFetchError(error, 'login');
+        } finally {
+            if (loginBtn) {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> LOGIN';
             }
         }
+    }
 
-        // Initialize everything when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 WhatsApp Bulk Messenger Pro Frontend Initialized');
-           
-            // Set up form handlers
-            setupFormHandlers();
-           
-            // Set up tab switching
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.addEventListener('click', function() {
-                    const tabName = this.textContent.toLowerCase().replace(' ', '');
-                    switchTab(tabName);
-                });
+    async function verifyEmail() {
+        const code = document.getElementById('verifyCode').value;
+       
+        if (!code) {
+            showStatus('Please enter verification code', 'error');
+            return;
+        }
+        
+        showStatus('Verifying your email...', 'loading');
+        
+        const verifyBtn = document.querySelector('#verificationModal button');
+        if (verifyBtn) {
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> VERIFYING...';
+        }
+        
+        try {
+            const response = await fetch(API_BASE + '/verify', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: userEmail, code})
             });
            
-            // Set up button event listeners
-            const startBtn = document.getElementById('startBtn');
-            const stopBtn = document.getElementById('stopBtn');
+            const result = await response.json();
            
-            if (startBtn) startBtn.addEventListener('click', startBot);
-            if (stopBtn) stopBtn.addEventListener('click', stopBot);
+            if (response.ok) {
+                hideVerificationModal();
+                showDashboard();
+                showStatus('Email verified successfully!', 'success');
+                loadUserProfile();
+            } else {
+                throw new Error(result.error || result.message || 'Verification failed');
+            }
            
-            // Initial data loading
-            updateStats();
-            checkServerStatus();
-           
-            // Set up periodic updates
-            setInterval(updateStats, 30000); // Update stats every 30 seconds
-            setInterval(checkServerStatus, 60000); // Check server status every minute
-           
-            // Check if user is already logged in
-            checkExistingSession();
-        });
-    </script>
-</body>
+        } catch (error) {
+            handleFetchError(error, 'verification');
+        } finally {
+            if (verifyBtn) {
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = '<i class="fas fa-check"></i> VERIFY';
+            }
+        }
+    }
 
+    async function saveSpreadsheet() {
+        const spreadsheetUrl = document.getElementById('spreadsheetUrl').value;
+       
+        if (!spreadsheetUrl) {
+            showStatus('Please enter your Google Sheet URL', 'error');
+            return;
+        }
+        if (!userSecretKey) {
+            showStatus('Please login first', 'error');
+            return;
+        }
+        
+        const saveSheetBtn = document.getElementById('saveSheetBtn');
+        saveSheetBtn.disabled = true;
+        saveSheetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
+       
+        try {
+            const response = await fetch(API_BASE + '/save_spreadsheet', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    secret_key: userSecretKey,
+                    spreadsheet_url: spreadsheetUrl
+                })
+            });
+           
+            const result = await response.json();
+           
+            if (response.ok) {
+                showStatus('Spreadsheet URL saved successfully!', 'success');
+                addBotLog('Spreadsheet saved successfully', 'success');
+            } else {
+                throw new Error(result.error || result.message || 'Failed to save spreadsheet');
+            }
+           
+        } catch (error) {
+            handleFetchError(error, 'save spreadsheet');
+        } finally {
+            saveSheetBtn.disabled = false;
+            saveSheetBtn.innerHTML = '<i class="fas fa-save"></i> SAVE SPREADSHEET';
+        }
+    }
+
+    async function startBot() {
+        if (!userSecretKey) {
+            showStatus('Please login first', 'error');
+            return;
+        }
+        
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+       
+        startBtn.disabled = true;
+        startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> STARTING...';
+        showStatus('Starting your WhatsApp bot...', 'loading');
+       
+        document.getElementById('qrSection').style.display = 'block';
+       
+        addBotLog('🚀 Starting WhatsApp Bot...', 'info');
+        addBotLog('📱 Please scan the QR code when it appears', 'warning');
+        addBotLog('⏳ Bot will start automatically after QR scan', 'info');
+        
+        try {
+            const response = await fetch(API_BASE + '/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    secret_key: userSecretKey
+                })
+            });
+           
+            const result = await response.json();
+           
+            if (response.ok) {
+                showStatus('Bot started successfully! Running 24/7...', 'success');
+                stopBtn.disabled = false;
+               
+                addBotLog('✅ Bot started successfully!', 'success');
+                addBotLog('🔄 Bot is now running on: ' + result.assigned_server, 'info');
+                addBotLog('📊 Processing your spreadsheet data...', 'info');
+               
+                simulateBotProgress();
+                updateBotStatus();
+            } else {
+                throw new Error(result.error || result.message || 'Failed to start bot');
+            }
+           
+        } catch (error) {
+            handleFetchError(error, 'start bot');
+        } finally {
+            startBtn.disabled = false;
+            startBtn.innerHTML = '<i class="fas fa-play"></i> START BOT';
+        }
+    }
+
+    async function stopBot() {
+        if (!userSecretKey) {
+            showStatus('Please login first', 'error');
+            return;
+        }
+        
+        const stopBtn = document.getElementById('stopBtn');
+        stopBtn.disabled = true;
+        stopBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> STOPPING...';
+        showStatus('Stopping your bot...', 'loading');
+       
+        addBotLog('🛑 Stopping bot...', 'warning');
+        
+        try {
+            const response = await fetch(API_BASE + '/stop', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    secret_key: userSecretKey
+                })
+            });
+           
+            const result = await response.json();
+           
+            if (response.ok) {
+                showStatus('Bot stopped successfully!', 'success');
+                addBotLog('✅ Bot stopped successfully!', 'success');
+               
+                document.getElementById('qrSection').style.display = 'none';
+                document.getElementById('progressFill').style.width = '0%';
+               
+                updateBotStatus();
+            } else {
+                throw new Error(result.error || result.message || 'Failed to stop bot');
+            }
+           
+        } catch (error) {
+            handleFetchError(error, 'stop bot');
+        } finally {
+            stopBtn.disabled = false;
+            stopBtn.innerHTML = '<i class="fas fa-stop"></i> STOP BOT';
+        }
+    }
+
+    function simulateBotProgress() {
+        let progress = 0;
+        const progressBar = document.getElementById('progressFill');
+        const interval = setInterval(() => {
+            progress += Math.random() * 5;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(interval);
+                addBotLog('🎉 Bot completed processing all contacts!', 'success');
+            }
+            progressBar.style.width = progress + '%';
+        }, 1000);
+    }
+
+    function addBotLog(message, type = 'info') {
+        const logContainer = document.getElementById('botLog');
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        logEntry.innerHTML = `
+            <span class="log-time">[${timestamp}]</span>
+            <span class="log-${type}">${message}</span>
+        `;
+        logContainer.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    async function loadUserProfile() {
+        if (!userSecretKey) return;
+       
+        try {
+            const response = await fetch(API_BASE + '/user/profile', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({secret_key: userSecretKey})
+            });
+           
+            const result = await response.json();
+           
+            if (response.ok) {
+                document.getElementById('userEmail').textContent = result.email;
+                document.getElementById('userCredits').textContent = result.credits;
+                document.getElementById('userStatus').textContent = result.verified ? 'Verified ✅' : 'Not Verified ❌';
+                document.getElementById('userSecretKey').textContent = userSecretKey;
+               
+                if (result.spreadsheet_url) {
+                    document.getElementById('spreadsheetUrl').value = result.spreadsheet_url;
+                }
+            }
+        } catch (error) {
+            handleFetchError(error, 'load profile');
+        }
+    }
+
+    async function loadUserActivity() {
+        if (!userSecretKey) return;
+       
+        try {
+            const response = await fetch(API_BASE + '/user/activity', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({secret_key: userSecretKey})
+            });
+           
+            const result = await response.json();
+           
+            if (response.ok && result.user_data) {
+                const userData = result.user_data;
+               
+                document.getElementById('totalActivities').textContent = userData.activity_history ? userData.activity_history.length : 0;
+                document.getElementById('filesUploaded').textContent = userData.files_uploaded ? userData.files_uploaded.length : 0;
+                document.getElementById('botSessionsCount').textContent = userData.bot_sessions ? userData.bot_sessions.length : 0;
+                document.getElementById('firstSeen').textContent = userData.first_seen ? new Date(userData.first_seen).toLocaleDateString() : '-';
+               
+                updateActivityHistory(userData.activity_history || []);
+            }
+        } catch (error) {
+            handleFetchError(error, 'load activity');
+        }
+    }
+
+    function updateActivityHistory(activities) {
+        const activityContainer = document.getElementById('activityHistory');
+        activityContainer.innerHTML = '';
+       
+        const recentActivities = activities.slice(-10).reverse();
+       
+        recentActivities.forEach(activity => {
+            const activityItem = document.createElement('div');
+            activityItem.className = 'activity-item';
+           
+            const time = new Date(activity.timestamp).toLocaleString();
+            const type = activity.type.replace(/_/g, ' ').toUpperCase();
+           
+            activityItem.innerHTML = `
+                <div class="activity-type">${type}</div>
+                <div class="activity-time">${time}</div>
+            `;
+           
+            activityContainer.appendChild(activityItem);
+        });
+    }
+
+    async function updateBotStatus() {
+        if (!userSecretKey) return;
+       
+        try {
+            const response = await fetch(API_BASE + '/status', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({secret_key: userSecretKey})
+            });
+           
+            const result = await response.json();
+           
+            if (response.ok && result.status !== 'no_active_session') {
+                document.getElementById('botStatusDisplay').textContent = result.status;
+                document.getElementById('assignedServer').textContent = result.assigned_server;
+                document.getElementById('startedAt').textContent = result.started_at;
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+               
+                const stopBtn = document.getElementById('stopBtn');
+                if (result.status === 'running') {
+                    stopBtn.disabled = false;
+                    document.getElementById('botStatusDisplay').innerHTML = '<span style="color: var(--success);">🟢 RUNNING (24/7)</span>';
+                    document.getElementById('qrSection').style.display = 'block';
+                } else {
+                    stopBtn.disabled = true;
+                    document.getElementById('botStatusDisplay').innerHTML = '<span style="color: var(--danger);">🔴 STOPPED</span>';
+                    document.getElementById('qrSection').style.display = 'none';
+                }
+            } else {
+                document.getElementById('botStatusDisplay').innerHTML = '<span style="color: #6b7280;">⚪ NO ACTIVE SESSION</span>';
+                document.getElementById('assignedServer').textContent = '-';
+                document.getElementById('startedAt').textContent = '-';
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('qrSection').style.display = 'none';
+            }
+        } catch (error) {
+            handleFetchError(error, 'update status');
+        }
+    }
+
+    function startStatusMonitoring() {
+        if (botStatusInterval) clearInterval(botStatusInterval);
+        botStatusInterval = setInterval(updateBotStatus, 10000);
+       
+        if (activityUpdateInterval) clearInterval(activityUpdateInterval);
+        activityUpdateInterval = setInterval(loadUserActivity, 30000);
+       
+        setInterval(checkServerStatus, 60000);
+    }
+
+    async function checkServerStatus() {
+        try {
+            const response = await fetch(API_BASE + '/server_status');
+            const result = await response.json();
+           
+            const serverStatusDiv = document.getElementById('serverStatus');
+            serverStatusDiv.innerHTML = '';
+           
+            let onlineServers = 0;
+           
+            for (const [server, status] of Object.entries(result.servers)) {
+                const serverDiv = document.createElement('div');
+                serverDiv.className = 'server-status';
+               
+                const statusDot = document.createElement('span');
+                statusDot.className = status ? 'status-dot status-online' : 'status-dot status-offline';
+                serverDiv.appendChild(statusDot);
+               
+                const serverName = server.split('//')[1].split('.')[0];
+                serverDiv.innerHTML += `${serverName} - <span style="color: ${status ? 'var(--success)' : 'var(--danger)'};">${status ? 'ONLINE' : 'OFFLINE'}</span>`;
+               
+                serverStatusDiv.appendChild(serverDiv);
+                if (status) onlineServers++;
+            }
+           
+            document.getElementById('serverCount').textContent = onlineServers;
+           
+        } catch (error) {
+            handleFetchError(error, 'server status');
+            document.getElementById('serverCount').textContent = '0';
+        }
+    }
+
+    async function updateStats() {
+        try {
+            const response = await fetch(API_BASE + '/stats');
+            if (response.ok) {
+                const result = await response.json();
+                document.getElementById('totalUsers').textContent = result.total_users || '0';
+                document.getElementById('activeBots').textContent = result.active_bots || '0';
+                document.getElementById('serverCount').textContent = result.server_count || '5';
+            }
+        } catch (error) {
+            handleFetchError(error, 'stats');
+            document.getElementById('totalUsers').textContent = '0';
+            document.getElementById('activeBots').textContent = '0';
+        }
+    }
+
+    // UI Management functions
+    function showDashboard() {
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('dashboardSection').style.display = 'block';
+    }
+
+    function showLogin() {
+        document.getElementById('registerForm').style.display = 'none';
+        document.getElementById('loginForm').style.display = 'block';
+    }
+
+    function showRegister() {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('registerForm').style.display = 'block';
+    }
+
+    function showVerificationModal() {
+        document.getElementById('verificationModal').style.display = 'flex';
+    }
+
+    function hideVerificationModal() {
+        document.getElementById('verificationModal').style.display = 'none';
+    }
+
+    function showBotStatusModal() {
+        document.getElementById('botStatusModal').style.display = 'flex';
+    }
+
+    function hideBotStatusModal() {
+        document.getElementById('botStatusModal').style.display = 'none';
+    }
+
+    function showStatus(message, type) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.textContent = message;
+        statusDiv.className = `status status-${type}`;
+        statusDiv.style.display = 'block';
+       
+        if (type === 'success') {
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+    }
+
+    function copySecretKey() {
+        if (!userSecretKey) {
+            showStatus('No secret key available', 'error');
+            return;
+        }
+       
+        navigator.clipboard.writeText(userSecretKey).then(() => {
+            showStatus('Secret key copied to clipboard!', 'success');
+        }).catch(() => {
+            showStatus('Failed to copy secret key', 'error');
+        });
+    }
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+       
+        const targetTab = document.getElementById(tabName + 'Tab');
+        if (targetTab) {
+            targetTab.classList.add('active');
+        }
+       
+        if (event && event.target) {
+            event.target.classList.add('active');
+        }
+    }
+
+    // Utility functions
+    function setupFormHandlers() {
+        console.log('Setting up form handlers...');
+        
+        document.addEventListener('submit', function(e) {
+            if (e.target.id === 'loginForm') {
+                e.preventDefault();
+                loginWithValidation();
+            }
+            if (e.target.id === 'registerForm') {
+                e.preventDefault();
+                registerWithValidation();
+            }
+        });
+
+        const loginBtn = document.querySelector('#loginForm button[type="submit"]');
+        const registerBtn = document.querySelector('#registerForm button[type="submit"]');
+        
+        if (loginBtn) {
+            loginBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                loginWithValidation();
+            });
+        }
+        
+        if (registerBtn) {
+            registerBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                registerWithValidation();
+            });
+        }
+
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (e.target.closest('#loginForm')) {
+                    e.preventDefault();
+                    loginWithValidation();
+                }
+                if (e.target.closest('#registerForm')) {
+                    e.preventDefault();
+                    registerWithValidation();
+                }
+                if (e.target.closest('#verificationModal')) {
+                    e.preventDefault();
+                    verifyEmail();
+                }
+            }
+        });
+
+        const verifyBtn = document.querySelector('#verificationModal button');
+        if (verifyBtn) {
+            verifyBtn.addEventListener('click', verifyEmail);
+        }
+
+        const spreadsheetInput = document.getElementById('spreadsheetUrl');
+        if (spreadsheetInput) {
+            spreadsheetInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    saveSpreadsheet();
+                }
+            });
+        }
+    }
+
+    function enableAllButtons() {
+        document.querySelectorAll('button').forEach(btn => {
+            btn.disabled = false;
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+        });
+    }
+
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        return date.toLocaleString();
+    }
+
+    function saveUserSession() {
+        if (userSecretKey && userEmail) {
+            localStorage.setItem('userSecretKey', userSecretKey);
+            localStorage.setItem('userEmail', userEmail);
+        }
+    }
+
+    function clearUserSession() {
+        localStorage.removeItem('userSecretKey');
+        localStorage.removeItem('userEmail');
+        userSecretKey = '';
+        userEmail = '';
+    }
+
+    function logout() {
+        clearUserSession();
+        document.getElementById('dashboardSection').style.display = 'none';
+        document.getElementById('authSection').style.display = 'block';
+        showLogin();
+        showStatus('Logged out successfully', 'success');
+       
+        if (botStatusInterval) clearInterval(botStatusInterval);
+        if (activityUpdateInterval) clearInterval(activityUpdateInterval);
+    }
+
+    function handleFetchError(error, operation) {
+        console.error(`Error during ${operation}:`, error);
+        let msg = `Error during ${operation}: `;
+        
+        if (error.message.includes('Failed to fetch')) {
+            msg += 'Cannot connect to server. Please check your internet connection and ensure the backend is running.';
+        } else if (error.message.includes('401')) {
+            msg += 'Invalid email or password. Please check your credentials.';
+        } else if (error.message.includes('Unexpected token')) {
+            msg += 'Server response error. Please try again later.';
+        } else {
+            msg += error.message;
+        }
+        
+        showStatus(msg, 'error');
+        if (operation.includes('bot')) {
+            addBotLog(`❌ ${operation} failed: ${error.message}`, 'error');
+        }
+    }
+
+    function checkExistingSession() {
+        const savedSecretKey = localStorage.getItem('userSecretKey');
+        const savedEmail = localStorage.getItem('userEmail');
+       
+        if (savedSecretKey && savedEmail) {
+            userSecretKey = savedSecretKey;
+            userEmail = savedEmail;
+            showDashboard();
+            loadUserProfile();
+            loadUserActivity();
+            startStatusMonitoring();
+        }
+    }
+
+    async function checkBackendHealth() {
+        try {
+            const response = await fetch(API_BASE + '/health');
+            if (response.ok) {
+                console.log('✅ Backend is reachable');
+                return true;
+            }
+        } catch (error) {
+            console.error('❌ Backend is not reachable:', error);
+            showStatus('Backend server is not available. Please try again later.', 'error');
+            return false;
+        }
+    }
+
+    // Initialize application
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 WhatsApp Bulk Messenger Pro Frontend Initialized');
+        console.log('API Base URL:', API_BASE);
+       
+        enableAllButtons();
+        setupFormHandlers();
+        
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const tabName = this.textContent.toLowerCase().replace(' ', '');
+                switchTab(tabName);
+            });
+        });
+       
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const saveSheetBtn = document.getElementById('saveSheetBtn');
+        const copyKeyBtn = document.getElementById('copyKeyBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+       
+        if (startBtn) startBtn.addEventListener('click', startBot);
+        if (stopBtn) stopBtn.addEventListener('click', stopBot);
+        if (saveSheetBtn) saveSheetBtn.addEventListener('click', saveSpreadsheet);
+        if (copyKeyBtn) copyKeyBtn.addEventListener('click', copySecretKey);
+        if (logoutBtn) logoutBtn.addEventListener('click', logout);
+       
+        checkBackendHealth();
+        updateStats();
+        checkServerStatus();
+       
+        setInterval(updateStats, 30000);
+        setInterval(checkServerStatus, 60000);
+       
+        checkExistingSession();
+        
+        console.log('Form handlers setup complete');
+        console.log('Login button:', document.querySelector('#loginForm button'));
+        console.log('Register button:', document.querySelector('#registerForm button'));
+    });
+</script>
+</body>
 </html>
