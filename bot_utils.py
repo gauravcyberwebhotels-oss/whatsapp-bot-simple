@@ -1,6 +1,7 @@
 import time
 import random
 from datetime import datetime
+import re
 
 def get_random_delay():
     """Get random delay between 2-3 minutes"""
@@ -12,9 +13,8 @@ def format_timestamp():
 
 def validate_phone_number(phone):
     """Validate and format phone number"""
-    import re
     clean_phone = re.sub(r'\D', '', str(phone))
-   
+
     if clean_phone.startswith('91') and len(clean_phone) in [11, 12]:
         return clean_phone
     elif len(clean_phone) == 10:
@@ -23,7 +23,7 @@ def validate_phone_number(phone):
         return clean_phone[1:]
     elif clean_phone.startswith('0') and len(clean_phone) == 11:
         return '91' + clean_phone[1:]
-   
+
     return clean_phone
 
 def log_activity(message, level="INFO"):
