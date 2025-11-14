@@ -21,7 +21,13 @@ from config import Config  # Import Config
 app = Flask(__name__)
 app.config.from_object(Config)
 db = SQLAlchemy(app)
-CORS(app)
+
+# FIXED CORS - Allow specific origins
+CORS(app, origins=[
+    'https://whatsapp-bot-simple.onrender.com',  # Your frontend
+    'http://localhost:3000',                     # Local dev
+    '*'                                          # Fallback for testing (remove in prod for security)
+])
 
 # Database Models
 class User(db.Model):
