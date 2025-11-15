@@ -10,8 +10,8 @@
         :root { --primary: #667eea; --secondary: #764ba2; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --dark: #1f2937; --light: #f8fafc; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); min-height: 100vh; padding: 20px; color: var(--dark); }
         .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
-        .header { background: linear-gradient(135deg, var(--dark) 0%, #374151 100%); color: white; padding: 40px 30px; text-align: center; }
         .header h1 { font-size: 2.5rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .header { background: linear-gradient(135deg, var(--dark) 0%, #374151 100%); color: white; padding: 40px 30px; text-align: center; }
         .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 40px 30px; }
         @media (max-width: 768px) { .main-content { grid-template-columns: 1fr; } }
         .panel { background: var(--light); border-radius: 15px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
@@ -20,261 +20,183 @@
         label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark); }
         input { width: 100%; padding: 15px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 16px; transition: all 0.3s; }
         input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
-        .btn-group { display: flex; gap: 15px; margin: 25px 0; }
-        .btn { flex: 1; padding: 15px 25px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn { flex: 1; padding: 15px 25px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; }
-        .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        .status-container { margin-top: 25px; }
-        .status { padding: 20px; border-radius: 10px; margin-bottom: 15px; display: none; text-align: center; font-weight: 600;}
+        .btn-secondary { background: #6b7280; color: white; }
+        .status-container { margin-top: 15px; }
+        .status { padding: 15px; border-radius: 10px; display: none; text-align: center; font-weight: 600;}
         .status-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
         .status-error { background: #fee2e2; color: #7f1d1d; border: 1px solid #fca5a5; }
-        .status-warning { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
         .user-info { background: white; padding: 20px; border-radius: 10px; border: 2px solid #e5e7eb; margin-bottom: 20px; }
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .info-item { display: flex; flex-direction: column; }
-        .info-label { font-size: 0.9rem; color: #6b7280; margin-bottom: 5px; }
         .info-value { font-size: 1rem; font-weight: 600; color: var(--dark); word-break: break-all;}
-        .auth-form { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .tab-container { margin: 20px 0; }
         .tabs { display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
-        .tab { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.3s; }
+        .tab { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; }
         .tab.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: 600; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; z-index: 999; justify-content: center; align-items: center; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 15px; max-width: 400px; width: 90%; }
+        .loading-overlay { display: none; /* Inherits from .modal */ }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .logout-btn { position: absolute; top: 20px; right: 20px; background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
+        .logout-btn { position: absolute; top: 20px; right: 20px; background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+    <div class="modal loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
     <div class="container">
         <div class="header">
-            <h1><i class="fab fa-whatsapp"></i> WhatsApp Bulk Messenger Pro</h1>
-            <p>User Authentication Demo</p>
+            <h1><i class="fab fa-whatsapp"></i> Messenger Pro</h1>
+            <p>User Authentication & Password Reset Demo</p>
         </div>
-      
         <div class="main-content">
             <div class="panel">
                 <div id="authSection">
-                    <div class="auth-form" id="loginForm">
+                    <div id="loginForm">
                         <h2><i class="fas fa-sign-in-alt"></i> Login</h2>
-                        <div class="form-group">
-                            <label for="loginEmail">Email Address</label>
-                            <input type="email" id="loginEmail" placeholder="your@email.com">
-                        </div>
-                        <div class="form-group">
-                            <label for="loginPassword">Password</label>
-                            <input type="password" id="loginPassword" placeholder="Your password">
-                        </div>
-                        <button class="btn btn-primary" onclick="handleLogin()">
-                            <i class="fas fa-sign-in-alt"></i> Login
-                        </button>
-                        <p style="text-align: center; margin-top: 15px;">
-                            No account? <a href="javascript:void(0)" onclick="showRegister()">Register here</a>
-                        </p>
+                        <div class="form-group"><label for="loginEmail">Email</label><input type="email" id="loginEmail"></div>
+                        <div class="form-group"><label for="loginPassword">Password</label><input type="password" id="loginPassword"></div>
+                        <button class="btn btn-primary" onclick="handleLogin()"><i class="fas fa-sign-in-alt"></i> Login</button>
+                        <p style="text-align:center; margin-top:15px;"><a href="javascript:void(0)" onclick="showForgotPasswordModal()">Forgot Password?</a> | <a href="javascript:void(0)" onclick="showRegister()">Register here</a></p>
                     </div>
-                    <div class="auth-form" id="registerForm" style="display:none">
+                    <div id="registerForm" style="display:none">
                         <h2><i class="fas fa-user-plus"></i> Create Account</h2>
-                        <div class="form-group">
-                            <label for="registerEmail">Email Address</label>
-                            <input type="email" id="registerEmail" placeholder="your@email.com">
-                        </div>
-                        <div class="form-group">
-                            <label for="registerPassword">Password (min 8 characters)</label>
-                            <input type="password" id="registerPassword" placeholder="Create a password">
-                        </div>
-                        <button class="btn btn-primary" onclick="handleRegister()">
-                            <i class="fas fa-user-plus"></i> Register
-                        </button>
-                        <p style="text-align: center; margin-top: 15px;">
-                            Have an account? <a href="javascript:void(0)" onclick="showLogin()">Login here</a>
-                        </p>
+                        <div class="form-group"><label for="registerEmail">Email</label><input type="email" id="registerEmail"></div>
+                        <div class="form-group"><label for="registerPassword">Password (min 8 characters)</label><input type="password" id="registerPassword"></div>
+                        <button class="btn btn-primary" onclick="handleRegister()"><i class="fas fa-user-plus"></i> Register</button>
+                        <p style="text-align:center; margin-top:15px;">Have an account? <a href="javascript:void(0)" onclick="showLogin()">Login here</a></p>
                     </div>
                 </div>
-                
                 <div id="dashboardSection" style="display:none">
                     <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
                     <h2><i class="fas fa-rocket"></i> Demo Dashboard</h2>
-                    <div class="user-info">
-                        <div class="info-grid">
-                            <div class="info-item"><span class="info-label">Email</span><span class="info-value" id="userEmail"></span></div>
-                            <div class="info-item"><span class="info-label">Credits</span><span class="info-value" id="userCredits"></span></div>
-                            <div class="info-item"><span class="info-label">Status</span><span class="info-value" id="userStatus"></span></div>
-                            <div class="info-item"><span class="info-label">Secret Key</span><span class="info-value" id="userSecretKey"></span></div>
-                        </div>
+                    <div class="user-info info-grid">
+                        <div><span class="info-label">Email</span><div class="info-value" id="userEmail"></div></div>
+                        <div><span class="info-label">Credits</span><div class="info-value" id="userCredits"></div></div>
+                        <div><span class="info-label">Status</span><div class="info-value" id="userStatus"></div></div>
+                        <div><span class="info-label">Secret Key</span><div class="info-value" id="userSecretKey"></div></div>
                     </div>
                     <div class="tab-container">
-                        <div class="tabs">
-                            <div class="tab active" onclick="switchTab('spreadsheet')">Spreadsheet</div>
-                            <div class="tab" onclick="switchTab('botControl')">Bot Control (Coming Soon)</div>
-                        </div>
+                        <div class="tabs"><div class="tab active" onclick="switchTab(this,'spreadsheet')">Spreadsheet</div></div>
                         <div id="spreadsheetTab" class="tab-content active">
-                            <div id="spreadsheetStatus" style="margin-bottom: 15px; font-weight: bold; word-break: break-all;"></div>
-                            <div class="form-group">
-                                <label for="spreadsheetUrl"><i class="fas fa-table"></i> Your Google Sheet URL</label>
-                                <input type="url" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/d/your-sheet-id/edit">
-                                <small style="color: #6b7280;">Enter a valid URL and click save.</small>
-                            </div>
+                            <div id="spreadsheetStatus" style="margin-bottom: 15px; font-weight: bold;"></div>
+                            <div class="form-group"><label for="spreadsheetUrl"><i class="fas fa-table"></i> Your Google Sheet URL</label><input type="url" id="spreadsheetUrl"></div>
                             <button class="btn btn-primary" onclick="handleSaveSpreadsheet()"><i class="fas fa-save"></i> SAVE</button>
-                        </div>
-                        <div id="botControlTab" class="tab-content">
-                            <h3>Bot management features will appear here.</h3>
                         </div>
                     </div>
                 </div>
-                 <div class="status-container"><div id="status" class="status"></div></div>
+                <div class="status-container"><div id="status"></div></div>
             </div>
+            <div class="panel"><h2><i class="fas fa-info-circle"></i> Instructions</h2><p style="line-height:1.6;"><strong>1. Register:</strong> Create a new account.<br><strong>2. Login:</strong> Sign into the dashboard.<br><strong>3. Forgot Password:</strong> Click the link on the login screen to receive a reset code via email.<br><strong>4. Reset:</strong> Use the code to set a new password and log in.</p></div>
+        </div>
+    </div>
 
-            <div class="panel">
-                <h2><i class="fas fa-info-circle"></i> Instructions</h2>
-                <p style="line-height: 1.6;">
-                    <strong>1. Register:</strong> Create an account.
-                    <br><strong>2. Login:</strong> Sign in to the demo dashboard.
-                    <br><strong>3. Save URL:</strong> Go to the "Spreadsheet" tab, enter a Google Sheet URL, and save it.
-                    <br><strong>4. Verify:</strong> Logout and log back in. The saved URL will still be there, confirming the database is working perfectly!
-                </p>
-            </div>
+    <!-- MODALS FOR PASSWORD RESET -->
+    <div class="modal" id="forgotPasswordModal">
+        <div class="modal-content">
+            <h2>Forgot Password</h2>
+            <div class="form-group"><label for="forgotEmail">Enter your account email</label><input type="email" id="forgotEmail"></div>
+            <div style="display:flex; gap:10px;"><button class="btn btn-primary" onclick="handleForgotPassword()">Send Code</button><button class="btn btn-secondary" onclick="hideModals()">Cancel</button></div>
+        </div>
+    </div>
+    <div class="modal" id="resetPasswordModal">
+        <div class="modal-content">
+            <h2>Reset Your Password</h2>
+            <div class="form-group"><label for="resetCode">Code from Email</label><input type="text" id="resetCode"></div>
+            <div class="form-group"><label for="newPassword">New Password (min 8 chars)</label><input type="password" id="newPassword"></div>
+            <div style="display:flex; gap:10px;"><button class="btn btn-primary" onclick="handleResetPassword()">Reset</button><button class="btn btn-secondary" onclick="hideModals()">Cancel</button></div>
         </div>
     </div>
     
 <script>
     const API_BASE = window.location.origin;
-    let userSecretKey = '';
-    let userEmail = '';
+    let userSecretKey, userEmail = '';
 
-    const loadingOverlay = document.getElementById('loadingOverlay');
-
+    const loading = document.getElementById('loadingOverlay');
+    const statusDiv = document.getElementById('status');
+    const forgotEmailInput = document.getElementById('forgotEmail');
+    
     function showStatus(message, type = 'error') {
-        const statusDiv = document.getElementById('status');
         statusDiv.textContent = message;
         statusDiv.className = `status status-${type}`;
         statusDiv.style.display = 'block';
-        setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
+        setTimeout(() => { statusDiv.style.display = 'none'; }, 6000);
     }
 
     async function apiRequest(endpoint, options) {
-        loadingOverlay.style.display = 'flex';
+        loading.style.display = 'flex';
         try {
             const response = await fetch(API_BASE + endpoint, options);
             const result = await response.json();
-            if (!response.ok) {
-                // If the server returns an error, create an Error object to be caught below
-                throw new Error(result.error || `Server returned status ${response.status}`);
-            }
-            return result; // Success
+            if (!response.ok) throw new Error(result.error || `Server returned status ${response.status}`);
+            return result;
         } catch (error) {
-            console.error(`API Error on ${endpoint}:`, error.message);
             showStatus(error.message, 'error');
-            return null; // Failure
+            return null;
         } finally {
-            loadingOverlay.style.display = 'none';
+            loading.style.display = 'none';
         }
     }
 
+    // --- BUTTON HANDLERS ---
     async function handleRegister() {
         const email = document.getElementById('registerEmail').value;
         const password = document.getElementById('registerPassword').value;
-        if (!email || !password) return showStatus('Email and password are required.', 'warning');
-        if (password.length < 8) return showStatus('Password must be at least 8 characters.', 'warning');
-        
-        const result = await apiRequest('/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
-        
-        if (result) {
-            showStatus(result.message, 'success');
-            showLogin();
-        }
+        const result = await apiRequest('/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+        if (result) { showStatus(result.message, 'success'); showLogin(); }
     }
 
     async function handleLogin() {
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
-        if (!email || !password) return showStatus('Email and password are required.', 'warning');
-        
-        const result = await apiRequest('/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
-
-        if (result) {
-            userEmail = email;
-            userSecretKey = result.secret_key;
-            showDashboard(result);
-        }
+        const result = await apiRequest('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+        if (result) { userEmail = email; userSecretKey = result.secret_key; showDashboard(result); }
     }
 
     async function handleSaveSpreadsheet() {
         const spreadsheetUrl = document.getElementById('spreadsheetUrl').value;
-        if (!spreadsheetUrl || !spreadsheetUrl.startsWith('https://docs.google.com/spreadsheets/')) {
-            return showStatus("Please enter a valid Google Sheets URL.", "warning");
-        }
-        
-        const result = await apiRequest('/save_spreadsheet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ secret_key: userSecretKey, spreadsheet_url: spreadsheetUrl })
-        });
-        
-        if (result) {
-            showStatus(result.message, 'success');
-            updateSpreadsheetStatus(spreadsheetUrl);
-        }
+        const result = await apiRequest('/save_spreadsheet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret_key: userSecretKey, spreadsheet_url: spreadsheetUrl }) });
+        if (result) { showStatus(result.message, 'success'); document.getElementById('spreadsheetStatus').innerHTML = `✅ Current URL: <span style="color: green;">${spreadsheetUrl}</span>`; }
     }
 
-    function logout() {
-        userSecretKey = ''; 
-        userEmail = '';
-        document.getElementById('dashboardSection').style.display = 'none';
-        document.getElementById('authSection').style.display = 'block';
-        showLogin();
-        showStatus('Logged out successfully', 'success');
+    async function handleForgotPassword() {
+        const email = forgotEmailInput.value;
+        if (!email) return showStatus("Email is required.", "error");
+        const result = await apiRequest('/forgot_password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+        if (result) { showStatus(result.message, 'success'); hideModals(); showResetPasswordModal(); }
+    }
+
+    async function handleResetPassword() {
+        const email = forgotEmailInput.value;
+        const code = document.getElementById('resetCode').value;
+        const new_password = document.getElementById('newPassword').value;
+        const result = await apiRequest('/reset_password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, code, new_password }) });
+        if (result) { showStatus(result.message, 'success'); hideModals(); showLogin(); }
     }
     
-    function showDashboard(userData) {
+    function logout() { userSecretKey = userEmail = ''; document.getElementById('dashboardSection').style.display = 'none'; document.getElementById('authSection').style.display = 'block'; showLogin(); showStatus('Logged out', 'success'); }
+
+    // --- UI HELPERS ---
+    function showDashboard(data) {
         document.getElementById('authSection').style.display = 'none';
         document.getElementById('dashboardSection').style.display = 'block';
         document.getElementById('userEmail').textContent = userEmail;
-        document.getElementById('userCredits').textContent = userData.credits;
+        document.getElementById('userCredits').textContent = data.credits || '100';
         document.getElementById('userStatus').textContent = 'Verified';
-        document.getElementById('userSecretKey').textContent = userData.secret_key;
-        updateSpreadsheetStatus(userData.spreadsheet_url);
-    }
-    
-    function updateSpreadsheetStatus(url) {
-        const statusDiv = document.getElementById('spreadsheetStatus');
-        const urlInput = document.getElementById('spreadsheetUrl');
-        if (url) {
-            statusDiv.innerHTML = `✅ Current URL: <span style="color: green;">${url}</span>`;
-            urlInput.value = url;
-        } else {
-            statusDiv.innerHTML = `🟡 No URL saved.`;
-            urlInput.value = '';
-        }
-    }
-    
-    function showLogin() {
-        document.getElementById('registerForm').style.display = 'none';
-        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('userSecretKey').textContent = data.secret_key;
+        const url = data.spreadsheet_url;
+        document.getElementById('spreadsheetStatus').innerHTML = url ? `✅ Current URL: <span style="color: green;">${url}</span>` : `🟡 No URL saved.`;
+        if (url) document.getElementById('spreadsheetUrl').value = url;
     }
 
-    function showRegister() {
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('registerForm').style.display = 'block';
-    }
-
-    function switchTab(tabName) {
-        document.querySelectorAll('.tab-content, .tab').forEach(el => el.classList.remove('active'));
-        document.getElementById(tabName + 'Tab')?.classList.add('active');
-        const tabEl = Array.from(document.querySelectorAll('.tab')).find(el => el.textContent.toLowerCase().includes(tabName));
-        if (tabEl) tabEl.classList.add('active');
-    }
-
+    function hideModals() { Array.from(document.getElementsByClassName('modal')).forEach(m => m.style.display = 'none'); }
+    function showForgotPasswordModal() { hideModals(); forgotEmailInput.value = ''; document.getElementById('forgotPasswordModal').style.display = 'flex'; }
+    function showResetPasswordModal() { hideModals(); document.getElementById('resetPasswordModal').style.display = 'flex'; }
+    function showLogin() { document.getElementById('registerForm').style.display = 'none'; document.getElementById('loginForm').style.display = 'block'; }
+    function showRegister() { document.getElementById('loginForm').style.display = 'none'; document.getElementById('registerForm').style.display = 'block'; }
+    function switchTab(clickedTab, contentId) { document.querySelectorAll('.tab-content, .tab').forEach(el => el.classList.remove('active')); document.getElementById(contentId + 'Tab').classList.add('active'); clickedTab.classList.add('active'); }
 </script>
 </body>
 </html>
