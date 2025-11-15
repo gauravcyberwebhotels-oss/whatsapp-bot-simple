@@ -1,4 +1,4 @@
-# app.py (FIXED VERSION)
+# app.py (FULLY FIXED VERSION)
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
