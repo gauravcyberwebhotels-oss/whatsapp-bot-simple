@@ -7,7 +7,7 @@ class Config:
     
     # Supabase Configuration
     SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://dakroxgamegsqbwqpcah.supabase.co')
-    SUPABASE_KEY = os.environ.get('SUPABASE_KEY', 'sbp_841029a97bc68581c577e1a92dcb723f589d1b02')
+    SUPABASE_KEY = os.environ.get('SUPABASE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRha3JveGdhbWVnc3Fid3FwY2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODU1NDgsImV4cCI6MjA3ODc2MTU0OH0.5UIGJfWkUtV3j7bNq7hyZ4gCk5DPx03iDPLRNlm9Wcs')
     
     # Email Configuration
     SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
@@ -25,3 +25,4 @@ class Config:
     ]
     
     SECRET_KEY = os.environ.get('SECRET_KEY', '4f6d8a3c9e2b1f7a8d5c0e9b2a7f4d8c1e6a9b3d8f2c5e7a1b9d4f6c8e3a2b7f')
+
