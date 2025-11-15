@@ -1,4 +1,4 @@
-# app.py (FULLY FIXED VERSION)
+# app.py (FIXED VERSION - NO EMAIL TIMEOUT)
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -11,6 +11,7 @@ import logging
 import requests
 import random
 import smtplib
+import threading
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 from config import Config
@@ -73,27 +74,37 @@ logger.info("✅ Supabase client initialized.")
 def hash_password(password): 
     return hashlib.sha256(password.encode()).hexdigest()
 
-def send_email(to_email, subject, body):
-    try:
-        msg = MIMEText(body, 'html')
-        msg['Subject'] = subject
-        msg['From'] = Config.EMAIL_ADDRESS
-        msg['To'] = to_email
-        
-        logger.info(f"Attempting to send email to {to_email} via {Config.SMTP_SERVER}:{Config.SMTP_PORT}")
-        
-        with smtplib.SMTP(Config.SMTP_SERVER, Config.SMTP_PORT) as server:
+def send_email_async(to_email, subject, body):
+    """Send email in a separate thread to avoid timeout"""
+    def send():
+        try:
+            msg = MIMEText(body, 'html')
+            msg['Subject'] = subject
+            msg['From'] = Config.EMAIL_ADDRESS
+            msg['To'] = to_email
+            
+            logger.info(f"Attempting to send email to {to_email} via {Config.SMTP_SERVER}:{Config.SMTP_PORT}")
+            
+            # Use shorter timeout for SMTP
+            server = smtplib.SMTP(Config.SMTP_SERVER, Config.SMTP_PORT, timeout=15)
             server.ehlo()
             server.starttls()
             server.ehlo()
             server.login(Config.EMAIL_ADDRESS, Config.EMAIL_PASSWORD)
             server.send_message(msg)
-        
-        logger.info(f"✅ Email sent successfully to {to_email}")
-        return True
-    except Exception as e:
-        logger.error(f"❌ FAILED TO SEND EMAIL to {to_email}. Error: {str(e)}")
-        return False
+            server.quit()
+            
+            logger.info(f"✅ Email sent successfully to {to_email}")
+            return True
+        except Exception as e:
+            logger.error(f"❌ FAILED TO SEND EMAIL to {to_email}. Error: {str(e)}")
+            return False
+    
+    # Run in background thread
+    thread = threading.Thread(target=send)
+    thread.daemon = True
+    thread.start()
+    return True  # Always return True immediately to avoid timeout
 
 @app.route('/')
 def serve_frontend(): 
@@ -214,13 +225,7 @@ def forgot_password():
     <p>If you didn't request this reset, please ignore this email.</p>
     """
     
-    # Send email
-    email_sent = send_email(email, "Your Password Reset Code", email_body)
-    
-    if not email_sent:
-        logger.error(f"Failed to send reset email to {email}")
-        return jsonify({"error": "Could not send the password reset email. Please try again later."}), 500
-    
+    # Store reset code first (before attempting to send email)
     # Delete any existing reset codes for this email
     supabase.delete('password_resets', {'email': email})
     
@@ -236,8 +241,23 @@ def forgot_password():
         logger.error(f"Failed to store reset token: {error}")
         return jsonify({"error": "Failed to process reset request."}), 500
     
-    logger.info(f"Reset code sent and stored for: {email}")
-    return jsonify({"message": "If an account exists, a reset code has been sent."})
+    # Try to send email (but don't wait for it - run in background)
+    try:
+        send_email_async(email, "Your Password Reset Code", email_body)
+        logger.info(f"Reset code generated for {email}: {reset_code}")
+        
+        # For development/testing, log the code so you can use it
+        if Config.DEBUG:
+            logger.info(f"DEBUG MODE: Reset code for {email} is {reset_code}")
+            
+    except Exception as e:
+        logger.error(f"Failed to queue email: {e}")
+        # Don't return error - the code is still stored and user can request another
+    
+    return jsonify({
+        "message": "If an account exists, a reset code has been sent.",
+        "debug_code": reset_code if Config.DEBUG else None  # Only in debug mode
+    })
 
 @app.route('/reset_password', methods=['POST'])
 def reset_password():
