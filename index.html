@@ -485,6 +485,23 @@
         }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Supabase Status Indicator */
+        .supabase-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--success);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .supabase-status.offline {
+            background: var(--danger);
+        }
     </style>
 </head>
 <body>
@@ -495,6 +512,9 @@
             <p>Enterprise-grade automation with 24/7 uptime guarantee</p>
             <div class="uptime-indicator">
                 <i class="fas fa-circle"></i> 24/7 ONLINE
+            </div>
+            <div id="supabaseStatus" class="supabase-status">
+                <i class="fas fa-database"></i> SUPABASE CONNECTED
             </div>
         </div>
       
@@ -717,9 +737,10 @@
                         <div class="feature-badge">24/7 UPTIME</div>
                     </div>
                     <div class="feature">
-                        <i class="fas fa-infinity"></i>
-                        <h3>Massive Scale</h3>
-                        <p>500+ users simultaneously</p>
+                        <i class="fas fa-database"></i>
+                        <h3>Supabase Powered</h3>
+                        <p>Real-time data storage</p>
+                        <div class="feature-badge">CLOUD SYNC</div>
                     </div>
                 </div>
             </div>
@@ -1158,9 +1179,9 @@ async function loadUserActivity() {
         if (response.ok && result.user_data) {
             const userData = result.user_data;
           
-            document.getElementById('totalActivities').textContent = userData.activity_history ? userData.activity_history.length : 0;
-            document.getElementById('filesUploaded').textContent = userData.files_uploaded ? userData.files_uploaded.length : 0;
-            document.getElementById('botSessionsCount').textContent = userData.bot_sessions ? userData.bot_sessions.length : 0;
+            document.getElementById('totalActivities').textContent = userData.total_activities || 0;
+            document.getElementById('filesUploaded').textContent = userData.files_uploaded || 0;
+            document.getElementById('botSessionsCount').textContent = userData.bot_sessions || 0;
             document.getElementById('firstSeen').textContent = userData.first_seen ? new Date(userData.first_seen).toLocaleDateString() : '-';
           
             updateActivityHistory(userData.activity_history || []);
@@ -1181,11 +1202,13 @@ function updateActivityHistory(activities) {
         activityItem.className = 'activity-item';
       
         const time = new Date(activity.timestamp).toLocaleString();
-        const type = activity.type.replace(/_/g, ' ').toUpperCase();
+        const type = activity.activity_type.replace(/_/g, ' ').toUpperCase();
+        const details = activity.details ? JSON.stringify(activity.details) : '';
       
         activityItem.innerHTML = `
             <div class="activity-type">${type}</div>
             <div class="activity-time">${time}</div>
+            ${details ? `<div style="font-size: 0.8rem; color: #6b7280;">${details}</div>` : ''}
         `;
       
         activityContainer.appendChild(activityItem);
@@ -1283,6 +1306,16 @@ async function updateStats() {
             document.getElementById('totalUsers').textContent = result.total_users || '0';
             document.getElementById('activeBots').textContent = result.active_bots || '0';
             document.getElementById('serverCount').textContent = result.server_count || '5';
+            
+            // Update Supabase status
+            const supabaseStatus = document.getElementById('supabaseStatus');
+            if (result.supabase_connected) {
+                supabaseStatus.innerHTML = '<i class="fas fa-database"></i> SUPABASE CONNECTED';
+                supabaseStatus.className = 'supabase-status';
+            } else {
+                supabaseStatus.innerHTML = '<i class="fas fa-database"></i> SUPABASE OFFLINE';
+                supabaseStatus.className = 'supabase-status offline';
+            }
         }
     } catch (error) {
         handleFetchError(error, 'stats');
@@ -1524,7 +1557,19 @@ async function checkBackendHealth() {
     try {
         const response = await fetch(API_BASE + '/health');
         if (response.ok) {
+            const result = await response.json();
             console.log('✅ Backend is reachable');
+            
+            // Update Supabase status from health check
+            const supabaseStatus = document.getElementById('supabaseStatus');
+            if (result.supabase_connected) {
+                supabaseStatus.innerHTML = '<i class="fas fa-database"></i> SUPABASE CONNECTED';
+                supabaseStatus.className = 'supabase-status';
+            } else {
+                supabaseStatus.innerHTML = '<i class="fas fa-database"></i> SUPABASE OFFLINE';
+                supabaseStatus.className = 'supabase-status offline';
+            }
+            
             return true;
         }
     } catch (error) {
@@ -1576,4 +1621,3 @@ document.addEventListener('DOMContentLoaded', function() {
     </script>
 </body>
 </html>
-
