@@ -17,26 +17,38 @@ import hashlib
 import shutil
 from sqlalchemy.exc import IntegrityError
 from config import Config
-from supabase import create_client, Client
+
+# Use lighter supabase client
+try:
+    from supabase_client import create_client
+    print("✅ Using lighter supabase-py client")
+except ImportError:
+    print("❌ supabase-py not available, using requests directly")
+    create_client = None
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 app.config.from_object(Config)
 db = SQLAlchemy(app)
 
-# Initialize Supabase client
+# Initialize Supabase client with lighter version
+supabase = None
 try:
-    supabase: Client = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_KEY'])
-    print("✅ Supabase client initialized successfully")
+    if create_client:
+        supabase = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
+        print("✅ Supabase client initialized successfully")
+    else:
+        print("⚠️ Using direct HTTP requests to Supabase")
 except Exception as e:
     print(f"❌ Supabase initialization error: {e}")
     supabase = None
 
-# CORS configuration - FIXED
+# CORS configuration
 CORS(app, origins=[
     'https://whatsapp-bot-simple.onrender.com',
     'http://localhost:3000',
     'http://localhost:5000',
-    'https://your-frontend-domain.onrender.com'
+    'http://localhost:8080',
+    '*'
 ], supports_credentials=True)
 
 # Database Models
@@ -71,113 +83,113 @@ BOT_SERVERS = [
     'https://bot5-q2ie.onrender.com'
 ]
 
-# Supabase data storage functions
-def save_user_activity_to_supabase(email, activity_type, details=None):
-    """Save user activity to Supabase"""
-    if not supabase:
-        print("❌ Supabase not available for saving activity")
-        return False
+# Lightweight Supabase functions using direct requests
+def supabase_request(table, method='GET', data=None, filters=None):
+    """Lightweight Supabase request handler"""
+    headers = {
+        'Authorization': f'Bearer {Config.SUPABASE_KEY}',
+        'apikey': Config.SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+    }
+    
+    url = f"{Config.SUPABASE_URL}/rest/v1/{table}"
+    
+    # Add filters to URL
+    if filters:
+        filter_str = '&'.join([f"{k}=eq.{v}" for k, v in filters.items()])
+        url = f"{url}?{filter_str}"
     
     try:
-        activity_data = {
-            'email': email,
-            'activity_type': activity_type,
-            'details': details or {},
-            'timestamp': datetime.now().isoformat(),
-            'created_at': datetime.now().isoformat()
-        }
+        if method.upper() == 'GET':
+            response = requests.get(url, headers=headers, timeout=10)
+        elif method.upper() == 'POST':
+            response = requests.post(url, headers=headers, json=data, timeout=10)
+        elif method.upper() == 'PATCH':
+            response = requests.patch(url, headers=headers, json=data, timeout=10)
+        elif method.upper() == 'DELETE':
+            response = requests.delete(url, headers=headers, timeout=10)
+        else:
+            return None
         
-        response = supabase.table('user_activities').insert(activity_data).execute()
-        
-        if hasattr(response, 'error') and response.error:
-            print(f"❌ Supabase activity save error: {response.error}")
-            return False
-        
+        if response.status_code in [200, 201]:
+            return response.json()
+        else:
+            print(f"❌ Supabase API error: {response.status_code} - {response.text}")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Supabase request error: {e}")
+        return None
+
+def save_user_activity_to_supabase(email, activity_type, details=None):
+    """Save user activity to Supabase using lightweight client"""
+    activity_data = {
+        'email': email,
+        'activity_type': activity_type,
+        'details': details or {},
+        'timestamp': datetime.now().isoformat(),
+        'created_at': datetime.now().isoformat()
+    }
+    
+    result = supabase_request('user_activities', 'POST', activity_data)
+    
+    if result:
         print(f"✅ Activity saved to Supabase for {email}")
         return True
-        
-    except Exception as e:
-        print(f"❌ Error saving activity to Supabase: {e}")
+    else:
+        print(f"❌ Failed to save activity for {email}")
         return False
 
 def get_user_activities_from_supabase(email):
-    """Get user activities from Supabase"""
-    if not supabase:
-        print("❌ Supabase not available for fetching activities")
-        return []
+    """Get user activities from Supabase using lightweight client"""
+    filters = {'email': email}
+    result = supabase_request('user_activities', 'GET', filters=filters)
     
-    try:
-        response = supabase.table('user_activities')\
-            .select('*')\
-            .eq('email', email)\
-            .order('timestamp', desc=True)\
-            .limit(100)\
-            .execute()
-        
-        if hasattr(response, 'error') and response.error:
-            print(f"❌ Supabase activity fetch error: {response.error}")
-            return []
-        
-        return response.data if hasattr(response, 'data') else []
-        
-    except Exception as e:
-        print(f"❌ Error fetching activities from Supabase: {e}")
-        return []
+    if result and isinstance(result, list):
+        # Sort by timestamp descending and limit to 100
+        sorted_activities = sorted(result, key=lambda x: x.get('timestamp', ''), reverse=True)[:100]
+        return sorted_activities
+    return []
 
 def get_user_stats_from_supabase(email):
-    """Get user statistics from Supabase"""
-    if not supabase:
-        print("❌ Supabase not available for fetching stats")
-        return {}
-    
+    """Get user statistics from Supabase using lightweight client"""
     try:
-        # Get first seen
-        first_response = supabase.table('user_activities')\
-            .select('timestamp')\
-            .eq('email', email)\
-            .order('timestamp', asc=True)\
-            .limit(1)\
-            .execute()
-        
-        first_seen = first_response.data[0]['timestamp'] if first_response.data else None
-        
-        # Get last login
-        login_response = supabase.table('user_activities')\
-            .select('timestamp')\
-            .eq('email', email)\
-            .eq('activity_type', 'login')\
-            .order('timestamp', desc=True)\
-            .limit(1)\
-            .execute()
-        
-        last_login = login_response.data[0]['timestamp'] if login_response.data else None
-        
         # Get all activities for this user
-        activities_response = supabase.table('user_activities')\
-            .select('activity_type')\
-            .eq('email', email)\
-            .execute()
+        activities = get_user_activities_from_supabase(email)
         
-        # Count different activity types
+        if not activities:
+            return {}
+        
+        # Calculate stats from activities
         activity_counts = {}
         file_uploads = 0
         bot_sessions = 0
+        first_seen = None
+        last_login = None
         
-        if hasattr(activities_response, 'data'):
-            for activity in activities_response.data:
-                activity_type = activity['activity_type']
-                activity_counts[activity_type] = activity_counts.get(activity_type, 0) + 1
-                
-                if activity_type == 'file_upload':
-                    file_uploads += 1
-                elif activity_type == 'bot_session':
-                    bot_sessions += 1
+        for activity in activities:
+            activity_type = activity.get('activity_type', '')
+            activity_counts[activity_type] = activity_counts.get(activity_type, 0) + 1
+            
+            if activity_type == 'file_upload':
+                file_uploads += 1
+            elif activity_type == 'bot_session':
+                bot_sessions += 1
+            elif activity_type == 'login':
+                last_login = activity.get('timestamp')
+            
+            # Find first seen
+            activity_time = activity.get('timestamp')
+            if activity_time:
+                if not first_seen or activity_time < first_seen:
+                    first_seen = activity_time
         
         return {
             'first_seen': first_seen,
             'last_login': last_login,
             'activity_counts': activity_counts,
-            'total_activities': sum(activity_counts.values()),
+            'total_activities': len(activities),
             'files_uploaded': file_uploads,
             'bot_sessions': bot_sessions,
             'status': 'active'
@@ -188,19 +200,18 @@ def get_user_stats_from_supabase(email):
         return {}
 
 def get_system_stats_from_supabase():
-    """Get system statistics from Supabase"""
-    if not supabase:
-        print("❌ Supabase not available for system stats")
-        return {}
-    
+    """Get system statistics from Supabase using lightweight client"""
     try:
-        # Get total unique users
-        users_response = supabase.table('user_activities')\
-            .select('email')\
-            .execute()
+        # Get all activities
+        result = supabase_request('user_activities', 'GET')
         
-        if hasattr(users_response, 'data'):
-            unique_emails = set([activity['email'] for activity in users_response.data])
+        if result and isinstance(result, list):
+            unique_emails = set()
+            for activity in result:
+                email = activity.get('email')
+                if email:
+                    unique_emails.add(email)
+            
             total_users = len(unique_emails)
         else:
             total_users = 0
@@ -247,7 +258,7 @@ EMAIL_CONFIG = {
     'password': Config.EMAIL_PASSWORD
 }
 
-# FIXED: Serve frontend
+# Serve frontend
 @app.route('/')
 def serve_frontend():
     return send_from_directory('.', 'index.html')
@@ -714,10 +725,6 @@ def send_verification_email(email, code):
     except Exception as e:
         print(f"❌ Failed to send email to {email}: {e}")
         return False
-
-def get_email_from_key(secret_key):
-    user = User.query.filter_by(secret_key=secret_key).first()
-    return user.email if user else None
 
 def start_user_bot(user_id, spreadsheet_url, assigned_server, email):
     """Start individual user bot process with THEIR spreadsheet"""
