@@ -56,15 +56,15 @@
                 <div id="authSection">
                     <div id="loginForm">
                         <h2><i class="fas fa-sign-in-alt"></i> Login</h2>
-                        <div class="form-group"><label for="loginEmail">Email</label><input type="email" id="loginEmail"></div>
-                        <div class="form-group"><label for="loginPassword">Password</label><input type="password" id="loginPassword"></div>
+                        <div class="form-group"><label for="loginEmail">Email</label><input type="email" id="loginEmail" placeholder="your@email.com"></div>
+                        <div class="form-group"><label for="loginPassword">Password</label><input type="password" id="loginPassword" placeholder="Your password"></div>
                         <button class="btn btn-primary" onclick="handleLogin()"><i class="fas fa-sign-in-alt"></i> Login</button>
                         <p style="text-align:center; margin-top:15px;"><a href="javascript:void(0)" onclick="showForgotPasswordModal()">Forgot Password?</a> | <a href="javascript:void(0)" onclick="showRegister()">Register here</a></p>
                     </div>
                     <div id="registerForm" style="display:none">
                         <h2><i class="fas fa-user-plus"></i> Create Account</h2>
-                        <div class="form-group"><label for="registerEmail">Email</label><input type="email" id="registerEmail"></div>
-                        <div class="form-group"><label for="registerPassword">Password (min 8 characters)</label><input type="password" id="registerPassword"></div>
+                        <div class="form-group"><label for="registerEmail">Email</label><input type="email" id="registerEmail" placeholder="your@email.com"></div>
+                        <div class="form-group"><label for="registerPassword">Password (min 8 characters)</label><input type="password" id="registerPassword" placeholder="Minimum 8 characters"></div>
                         <button class="btn btn-primary" onclick="handleRegister()"><i class="fas fa-user-plus"></i> Register</button>
                         <p style="text-align:center; margin-top:15px;">Have an account? <a href="javascript:void(0)" onclick="showLogin()">Login here</a></p>
                     </div>
@@ -82,7 +82,7 @@
                         <div class="tabs"><div class="tab active" onclick="switchTab(this,'spreadsheet')">Spreadsheet</div></div>
                         <div id="spreadsheetTab" class="tab-content active">
                             <div id="spreadsheetStatus" style="margin-bottom: 15px; font-weight: bold;"></div>
-                            <div class="form-group"><label for="spreadsheetUrl"><i class="fas fa-table"></i> Your Google Sheet URL</label><input type="url" id="spreadsheetUrl"></div>
+                            <div class="form-group"><label for="spreadsheetUrl"><i class="fas fa-table"></i> Your Google Sheet URL</label><input type="url" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/..."></div>
                             <button class="btn btn-primary" onclick="handleSaveSpreadsheet()"><i class="fas fa-save"></i> SAVE</button>
                         </div>
                     </div>
@@ -96,17 +96,41 @@
     <!-- MODALS FOR PASSWORD RESET -->
     <div class="modal" id="forgotPasswordModal">
         <div class="modal-content">
-            <h2>Forgot Password</h2>
-            <div class="form-group"><label for="forgotEmail">Enter your account email</label><input type="email" id="forgotEmail"></div>
-            <div style="display:flex; gap:10px;"><button class="btn btn-primary" onclick="handleForgotPassword()">Send Code</button><button class="btn btn-secondary" onclick="hideModals()">Cancel</button></div>
+            <h2><i class="fas fa-key"></i> Forgot Password</h2>
+            <div class="form-group">
+                <label for="forgotEmail">Enter your account email</label>
+                <input type="email" id="forgotEmail" placeholder="your@email.com">
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-primary" onclick="handleForgotPassword()">
+                    <i class="fas fa-paper-plane"></i> Send Code
+                </button>
+                <button class="btn btn-secondary" onclick="hideModals()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
         </div>
     </div>
+    
     <div class="modal" id="resetPasswordModal">
         <div class="modal-content">
-            <h2>Reset Your Password</h2>
-            <div class="form-group"><label for="resetCode">Code from Email</label><input type="text" id="resetCode"></div>
-            <div class="form-group"><label for="newPassword">New Password (min 8 chars)</label><input type="password" id="newPassword"></div>
-            <div style="display:flex; gap:10px;"><button class="btn btn-primary" onclick="handleResetPassword()">Reset</button><button class="btn btn-secondary" onclick="hideModals()">Cancel</button></div>
+            <h2><i class="fas fa-lock"></i> Reset Your Password</h2>
+            <div class="form-group">
+                <label for="resetCode">6-digit Code from Email</label>
+                <input type="text" id="resetCode" placeholder="Enter 6-digit code" maxlength="6">
+            </div>
+            <div class="form-group">
+                <label for="newPassword">New Password (min 8 characters)</label>
+                <input type="password" id="newPassword" placeholder="Enter new password">
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-primary" onclick="handleResetPassword()">
+                    <i class="fas fa-sync-alt"></i> Reset Password
+                </button>
+                <button class="btn btn-secondary" onclick="hideModals()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
         </div>
     </div>
     
@@ -114,7 +138,7 @@
     const API_BASE = window.location.origin;
     let userSecretKey = '';
     let userEmail = '';
-    let resetEmail = ''; // Store email for reset flow
+    let resetEmail = '';
 
     const loading = document.getElementById('loadingOverlay');
     const statusDiv = document.getElementById('status');
@@ -173,7 +197,6 @@
         if (result) {
             showStatus(result.message, 'success');
             showLogin();
-            // Clear form
             document.getElementById('registerEmail').value = '';
             document.getElementById('registerPassword').value = '';
         }
@@ -235,7 +258,7 @@
             return;
         }
         
-        resetEmail = email; // Store for the reset step
+        resetEmail = email;
         
         const result = await apiRequest('/forgot_password', {
             method: 'POST',
@@ -243,9 +266,10 @@
         });
         
         if (result) {
-            showStatus(result.message, 'success');
+            // SUCCESS - Show the reset password modal immediately
             hideModals();
             showResetPasswordModal();
+            showStatus("Reset code sent to your email. Check your inbox.", "success");
         }
     }
 
@@ -276,7 +300,6 @@
             showStatus(result.message, 'success');
             hideModals();
             showLogin();
-            // Clear reset form
             document.getElementById('resetCode').value = '';
             document.getElementById('newPassword').value = '';
             resetEmail = '';
@@ -313,17 +336,20 @@
     }
 
     function hideModals() { 
-        Array.from(document.getElementsByClassName('modal')).forEach(m => m.style.display = 'none'); 
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            modal.style.display = 'none';
+        });
     }
     
     function showForgotPasswordModal() { 
-        hideModals(); 
+        hideModals();
         document.getElementById('forgotEmail').value = '';
         document.getElementById('forgotPasswordModal').style.display = 'flex'; 
     }
     
     function showResetPasswordModal() { 
-        hideModals(); 
+        hideModals();
         document.getElementById('resetCode').value = '';
         document.getElementById('newPassword').value = '';
         document.getElementById('resetPasswordModal').style.display = 'flex'; 
@@ -332,7 +358,6 @@
     function showLogin() { 
         document.getElementById('registerForm').style.display = 'none'; 
         document.getElementById('loginForm').style.display = 'block'; 
-        // Clear login form
         document.getElementById('loginEmail').value = '';
         document.getElementById('loginPassword').value = '';
     }
@@ -340,7 +365,6 @@
     function showRegister() { 
         document.getElementById('loginForm').style.display = 'none'; 
         document.getElementById('registerForm').style.display = 'block'; 
-        // Clear register form
         document.getElementById('registerEmail').value = '';
         document.getElementById('registerPassword').value = '';
     }
@@ -353,13 +377,35 @@
 
     // Close modals when clicking outside
     window.onclick = function(event) {
-        const modals = document.getElementsByClassName('modal');
-        for (let modal of modals) {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
             if (event.target === modal) {
                 modal.style.display = 'none';
             }
-        }
+        });
     }
+
+    // Add Enter key support for forms
+    document.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            // Login form
+            if (document.getElementById('loginForm').style.display !== 'none') {
+                handleLogin();
+            }
+            // Register form
+            else if (document.getElementById('registerForm').style.display !== 'none') {
+                handleRegister();
+            }
+            // Forgot password modal
+            else if (document.getElementById('forgotPasswordModal').style.display === 'flex') {
+                handleForgotPassword();
+            }
+            // Reset password modal
+            else if (document.getElementById('resetPasswordModal').style.display === 'flex') {
+                handleResetPassword();
+            }
+        }
+    });
 </script>
 </body>
 </html>
