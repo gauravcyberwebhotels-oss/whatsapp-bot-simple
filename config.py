@@ -19,5 +19,5 @@ class Config:
     EMAIL_ADDRESS = os.environ.get('EMAIL_ADDRESS', 'gauravcyberwebhotels@gmail.com')
     EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD', 'mdyd lhin edma qxis')
     
-    # Debug settings
-    DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+    # Debug settings - SET THIS TO True FOR TESTING
+    DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
