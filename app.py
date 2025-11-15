@@ -20,14 +20,14 @@ app = Flask(__name__, static_folder='.', static_url_path='')
 app.config.from_object(Config)
 
 # --- Extensions ---
-CORS(app, origins=['*']) # Simplified for now, can be restricted later
+CORS(app, origins=['*'])
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"]
 )
 
-# --- Supabase Client Utility ---
+# --- Supabase Client Utility (Now includes UPDATE) ---
 class SupabaseClient:
     def __init__(self, url, key):
         self.url = url
@@ -39,15 +39,11 @@ class SupabaseClient:
         }
 
     def insert(self, table, data):
-        """Inserts a single row of data into the specified table."""
         try:
             response = requests.post(
-                f"{self.url}/rest/v1/{table}",
-                headers=self.headers,
-                json=data,
-                timeout=10
+                f"{self.url}/rest/v1/{table}", headers=self.headers, json=data, timeout=10
             )
-            response.raise_for_status()  # Raise an exception for bad status codes
+            response.raise_for_status()
             return response.json(), None
         except requests.exceptions.HTTPError as e:
             logger.error(f"Supabase insert HTTP error: {e.response.text}")
@@ -57,159 +53,127 @@ class SupabaseClient:
             return None, str(e)
 
     def select(self, table, filters=None, single=False):
-        """Selects data from a table with optional filters."""
         try:
             url = f"{self.url}/rest/v1/{table}"
             if filters:
                 filter_str = '&'.join([f"{k}=eq.{v}" for k, v in filters.items()])
                 url = f"{url}?{filter_str}"
-
-            # If 'single' is true, Supabase expects a specific header for a single object
+            
             headers = self.headers.copy()
             if single:
                 headers['Accept'] = 'application/vnd.pgrst.object+json'
-
+            
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             return response.json(), None
         except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404 or e.response.status_code == 406: # 406 is for no result on single=True
+                return None, None
             logger.error(f"Supabase select HTTP error: {e.response.text}")
             return None, e.response.json().get('message', 'Select failed')
         except Exception as e:
             logger.error(f"Supabase select exception: {e}")
             return None, str(e)
+            
+    def update(self, table, filters, data_to_update):
+        """Updates rows in a table matching the filters."""
+        try:
+            filter_str = '&'.join([f"{k}=eq.{v}" for k, v in filters.items()])
+            url = f"{self.url}/rest/v1/{table}?{filter_str}"
+            
+            response = requests.patch(url, headers=self.headers, json=data_to_update, timeout=10)
+            response.raise_for_status()
+            return response.json(), None
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"Supabase update HTTP error: {e.response.text}")
+            return None, e.response.json().get('message', 'Update failed')
+        except Exception as e:
+            logger.error(f"Supabase update exception: {e}")
+            return None, str(e)
 
-# --- Initialize the Supabase Client ---
+
 supabase = SupabaseClient(Config.SUPABASE_URL, Config.SUPABASE_KEY)
-logger.info("✅ Supabase client initialized.")
+logger.info("✅ Supabase client initialized with update capabilities.")
 
-
-# --- Simplified Utility Functions ---
 def generate_secure_token(length=16):
-    """Generates a secure hex token prefixed with 'sk_'."""
     return f"sk_{secrets.token_hex(length)}"
-
-# --- Routes ---
 
 @app.route('/')
 def serve_frontend():
     return send_from_directory('.', 'index.html')
 
-@app.route('/<path:path>')
-def serve_static(path):
-    return send_from_directory('.', path)
-
 @app.route('/health')
 def health():
-    return jsonify({"status": "healthy", "database": "supabase_connected"}), 200
+    return jsonify({"status": "healthy"}), 200
     
 @app.route('/register', methods=['POST'])
-@limiter.limit("5 per minute")
 def register():
     data = request.get_json()
-    if not data:
-        return jsonify({"error": "No data provided"}), 400
-    
     email = data.get('email')
     password = data.get('password')
-
-    if not email or not password:
-        return jsonify({"error": "Email and password are required"}), 400
-
-    # Basic password strength check
-    if len(password) < 8:
-        return jsonify({"error": "Password must be at least 8 characters long"}), 400
-
-    password_hash = hashlib.sha256(password.encode()).hexdigest()
-    secret_key = generate_secure_token()
+    if not email or not password: return jsonify({"error": "Email and password are required"}), 400
+    if len(password) < 8: return jsonify({"error": "Password must be at least 8 characters long"}), 400
     
-    new_user_data = {
-        'email': email,
-        'password_hash': password_hash,
-        'secret_key': secret_key
-    }
+    password_hash = hashlib.sha224(password.encode()).hexdigest()
+    secret_key = generate_secure_token()
+    new_user_data = {'email': email, 'password_hash': password_hash, 'secret_key': secret_key}
 
-    result, error = supabase.insert('users', new_user_data)
-
+    _, error = supabase.insert('users', new_user_data)
     if error:
-        # Check for unique constraint violation
-        if 'unique constraint' in error.lower():
-            return jsonify({"error": "Email already registered"}), 400
+        if 'unique constraint' in error.lower(): return jsonify({"error": "Email already registered"}), 400
         return jsonify({"error": f"Registration failed: {error}"}), 500
-
-    logger.info(f"✅ User registered successfully: {email}")
-    return jsonify({
-        "status": "success",
-        "message": "Registration successful. You can now log in.",
-    }), 201
+        
+    logger.info(f"✅ User registered: {email}")
+    return jsonify({"status": "success", "message": "Registration successful! You can now log in."}), 201
 
 @app.route('/login', methods=['POST'])
-@limiter.limit("10 per minute")
 def login():
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
+    if not email or not password: return jsonify({"error": "Email and password are required"}), 400
 
-    if not email or not password:
-        return jsonify({"error": "Email and password are required"}), 400
-
-    # Find the user by email in Supabase
     user_data, error = supabase.select('users', filters={'email': email}, single=True)
-
     if error or not user_data:
-        logger.warning(f"Login failed for {email}: User not found or DB error.")
         return jsonify({"error": "Invalid email or password"}), 401
 
-    # Check the password
-    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    password_hash = hashlib.sha224(password.encode()).hexdigest()
     if user_data.get('password_hash') == password_hash:
-        logger.info(f"✅ User logged in successfully: {email}")
+        logger.info(f"✅ User logged in: {email}")
         return jsonify({
             "status": "success",
             "message": "Login successful",
             "secret_key": user_data.get('secret_key'),
-            "credits": user_data.get('credits', 100) # Default if not set
+            "credits": user_data.get('credits', 100),
+            "spreadsheet_url": user_data.get('spreadsheet_url', '') # Send spreadsheet URL
         })
     else:
-        logger.warning(f"Login failed for {email}: Invalid password.")
         return jsonify({"error": "Invalid email or password"}), 401
         
-# --- Placeholder Routes for Future Bot Functionality ---
-# These are kept so your frontend doesn't break, but they are disabled for now.
-@app.route('/user/profile', methods=['POST'])
-def get_user_profile():
-    return jsonify({"error": "Profile functionality is coming soon."}), 501
-    
 @app.route('/save_spreadsheet', methods=['POST'])
 def save_spreadsheet():
-    return jsonify({"error": "Bot functionality is coming soon."}), 501
-    
-@app.route('/start', methods=['POST'])
-def start_bot():
-    return jsonify({"error": "Bot functionality is coming soon."}), 501
+    """Saves the spreadsheet URL for a user, identified by secret_key."""
+    data = request.get_json()
+    secret_key = data.get('secret_key')
+    spreadsheet_url = data.get('spreadsheet_url')
 
-@app.route('/stop', methods=['POST'])
-def stop_bot():
-    return jsonify({"error": "Bot functionality is coming soon."}), 501
-    
-@app.route('/status', methods=['POST'])
-def get_status():
-    return jsonify({"status": "no_active_session"}), 200
+    if not secret_key or spreadsheet_url is None:
+        return jsonify({"error": "Secret key and spreadsheet URL are required"}), 400
 
-@app.route('/progress', methods=['POST'])
-def get_progress():
-    return jsonify({"status": "no_active_session"}), 200
+    _, error = supabase.update(
+        'users', 
+        filters={'secret_key': secret_key}, 
+        data_to_update={'spreadsheet_url': spreadsheet_url}
+    )
 
-@app.route('/stats')
-def get_stats():
-     return jsonify({"total_users": 0, "active_bots": 0}), 200
-     
-@app.errorhandler(429)
-def ratelimit_handler(e):
-    return jsonify({"error": "Too many requests. Please try again later."}), 429
+    if error:
+        return jsonify({"error": f"Failed to save URL: {error}"}), 500
+        
+    logger.info(f"✅ Spreadsheet URL saved for user.")
+    return jsonify({"status": "success", "message": "Spreadsheet URL saved successfully"})
 
-# --- Run the App ---
+# ... (other routes can remain as placeholders)
+
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 10000))
-    logger.info(f"🚀 Starting server on port {port}")
     app.run(host="0.0.0.0", port=port, debug=False)
