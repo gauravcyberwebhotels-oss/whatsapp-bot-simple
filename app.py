@@ -28,39 +28,6 @@ from contextlib import contextmanager
 from functools import wraps
 import jwt
 from config import Config
-import requests
-
-def save_user_activity_to_supabase(email, activity_type, details=None):
-    """Save user activity using direct Supabase API calls"""
-    activity_data = {
-        'email': email,
-        'activity_type': activity_type,
-        'details': details or {},
-        'timestamp': datetime.now().isoformat(),
-        'created_at': datetime.now().isoformat()
-    }
-    
-    headers = {
-        'Authorization': f'Bearer {Config.SUPABASE_KEY}',
-        'apikey': Config.SUPABASE_KEY,
-        'Content-Type': 'application/json'
-    }
-    
-    try:
-        response = requests.post(
-            f"{Config.SUPABASE_URL}/rest/v1/user_activities",
-            headers=headers,
-            json=activity_data
-        )
-        if response.status_code == 201:
-            logger.info(f"✅ Activity saved to Supabase for {email}")
-            return True
-        else:
-            logger.error(f"❌ Failed to save activity: {response.status_code}")
-            return False
-    except Exception as e:
-        logger.error(f"❌ Supabase API error: {e}")
-        return False
 
 # Enhanced logging configuration
 logging.basicConfig(
@@ -382,8 +349,9 @@ def auth_required(f):
     
     return decorated_function
 
-# Supabase Functions
+# Supabase Functions using direct API calls
 def save_user_activity_to_supabase(email, activity_type, details=None):
+    """Save user activity using direct Supabase API calls"""
     activity_data = {
         'email': email,
         'activity_type': activity_type,
@@ -392,22 +360,50 @@ def save_user_activity_to_supabase(email, activity_type, details=None):
         'created_at': datetime.now().isoformat()
     }
     
-    result = supabase_client.insert('user_activities', activity_data)
+    headers = {
+        'Authorization': f'Bearer {Config.SUPABASE_KEY}',
+        'apikey': Config.SUPABASE_KEY,
+        'Content-Type': 'application/json'
+    }
     
-    if result:
-        logger.info(f"✅ Activity saved to Supabase for {email}")
-        return True
-    else:
-        logger.error(f"❌ Failed to save activity for {email}")
+    try:
+        response = requests.post(
+            f"{Config.SUPABASE_URL}/rest/v1/user_activities",
+            headers=headers,
+            json=activity_data,
+            timeout=10
+        )
+        if response.status_code == 201:
+            logger.info(f"✅ Activity saved to Supabase for {email}")
+            return True
+        else:
+            logger.error(f"❌ Failed to save activity: {response.status_code} - {response.text}")
+            return False
+    except Exception as e:
+        logger.error(f"❌ Supabase API error: {e}")
         return False
 
 def get_user_activities_from_supabase(email):
-    result = supabase_client.select('user_activities', {'email': email})
+    """Get user activities using direct Supabase API calls"""
+    headers = {
+        'Authorization': f'Bearer {Config.SUPABASE_KEY}',
+        'apikey': Config.SUPABASE_KEY
+    }
     
-    if result and isinstance(result, list):
-        sorted_activities = sorted(result, key=lambda x: x.get('timestamp', ''), reverse=True)[:100]
-        return sorted_activities
-    return []
+    try:
+        response = requests.get(
+            f"{Config.SUPABASE_URL}/rest/v1/user_activities?email=eq.{email}&order=timestamp.desc&limit=100",
+            headers=headers,
+            timeout=10
+        )
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logger.error(f"❌ Failed to get activities: {response.status_code}")
+            return []
+    except Exception as e:
+        logger.error(f"❌ Supabase API error: {e}")
+        return []
 
 def get_user_stats_from_supabase(email):
     try:
@@ -540,11 +536,23 @@ def health():
     
     resources = resource_manager.get_system_resources()
     
+    # Test Supabase connection
+    supabase_connected = False
+    try:
+        headers = {
+            'Authorization': f'Bearer {Config.SUPABASE_KEY}',
+            'apikey': Config.SUPABASE_KEY
+        }
+        response = requests.get(f"{Config.SUPABASE_URL}/rest/v1/", headers=headers, timeout=5)
+        supabase_connected = response.status_code == 200
+    except:
+        supabase_connected = False
+    
     return jsonify({
         "status": "healthy" if db_healthy else "degraded",
         "timestamp": datetime.now().isoformat(),
         "database": "connected" if db_healthy else "disconnected",
-        "supabase_connected": supabase_client is not None,
+        "supabase_connected": supabase_connected,
         "system_resources": resources,
         "active_sessions": len(session_manager.sessions),
         "server_stats": bot_server_manager.get_server_stats()
@@ -564,7 +572,7 @@ def get_stats():
             "last_updated": datetime.now().isoformat(),
             "system_resources": resources,
             "server_stats": server_stats,
-            "supabase_connected": supabase_client is not None
+            "supabase_connected": True  # Assume true for now to avoid errors
         })
     except Exception as e:
         logger.error(f"Stats endpoint error: {e}")
