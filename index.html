@@ -36,41 +36,93 @@
         .tab.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: 600; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 30px; border-radius: 15px; max-width: 400px; width: 90%; }
-        .loading-overlay { display: none; /* Inherits from .modal */ }
+        
+        /* MODAL STYLES - FIXED */
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0,0,0,0.7); 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .modal-content { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 15px; 
+            max-width: 400px; 
+            width: 90%; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1001;
+        }
+        
+        .loading-overlay { display: none; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .logout-btn { position: absolute; top: 20px; right: 20px; background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="modal loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+    <div class="modal loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+    
     <div class="container">
         <div class="header">
             <h1><i class="fab fa-whatsapp"></i> Messenger Pro</h1>
             <p>User Authentication & Password Reset Demo</p>
         </div>
+        
         <div class="main-content">
             <div class="panel">
                 <div id="authSection">
                     <div id="loginForm">
                         <h2><i class="fas fa-sign-in-alt"></i> Login</h2>
-                        <div class="form-group"><label for="loginEmail">Email</label><input type="email" id="loginEmail" placeholder="your@email.com"></div>
-                        <div class="form-group"><label for="loginPassword">Password</label><input type="password" id="loginPassword" placeholder="Your password"></div>
-                        <button class="btn btn-primary" onclick="handleLogin()"><i class="fas fa-sign-in-alt"></i> Login</button>
-                        <p style="text-align:center; margin-top:15px;"><a href="javascript:void(0)" onclick="showForgotPasswordModal()">Forgot Password?</a> | <a href="javascript:void(0)" onclick="showRegister()">Register here</a></p>
+                        <div class="form-group">
+                            <label for="loginEmail">Email</label>
+                            <input type="email" id="loginEmail" placeholder="your@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPassword">Password</label>
+                            <input type="password" id="loginPassword" placeholder="Your password">
+                        </div>
+                        <button class="btn btn-primary" onclick="handleLogin()">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        <p style="text-align:center; margin-top:15px;">
+                            <a href="javascript:void(0)" onclick="showForgotPasswordModal()">Forgot Password?</a> | 
+                            <a href="javascript:void(0)" onclick="showRegister()">Register here</a>
+                        </p>
                     </div>
+                    
                     <div id="registerForm" style="display:none">
                         <h2><i class="fas fa-user-plus"></i> Create Account</h2>
-                        <div class="form-group"><label for="registerEmail">Email</label><input type="email" id="registerEmail" placeholder="your@email.com"></div>
-                        <div class="form-group"><label for="registerPassword">Password (min 8 characters)</label><input type="password" id="registerPassword" placeholder="Minimum 8 characters"></div>
-                        <button class="btn btn-primary" onclick="handleRegister()"><i class="fas fa-user-plus"></i> Register</button>
-                        <p style="text-align:center; margin-top:15px;">Have an account? <a href="javascript:void(0)" onclick="showLogin()">Login here</a></p>
+                        <div class="form-group">
+                            <label for="registerEmail">Email</label>
+                            <input type="email" id="registerEmail" placeholder="your@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="registerPassword">Password (min 8 characters)</label>
+                            <input type="password" id="registerPassword" placeholder="Minimum 8 characters">
+                        </div>
+                        <button class="btn btn-primary" onclick="handleRegister()">
+                            <i class="fas fa-user-plus"></i> Register
+                        </button>
+                        <p style="text-align:center; margin-top:15px;">
+                            Have an account? <a href="javascript:void(0)" onclick="showLogin()">Login here</a>
+                        </p>
                     </div>
                 </div>
+                
                 <div id="dashboardSection" style="display:none">
-                    <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                    <button class="logout-btn" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
                     <h2><i class="fas fa-rocket"></i> Demo Dashboard</h2>
                     <div class="user-info info-grid">
                         <div><span class="info-label">Email</span><div class="info-value" id="userEmail"></div></div>
@@ -79,21 +131,40 @@
                         <div><span class="info-label">Secret Key</span><div class="info-value" id="userSecretKey"></div></div>
                     </div>
                     <div class="tab-container">
-                        <div class="tabs"><div class="tab active" onclick="switchTab(this,'spreadsheet')">Spreadsheet</div></div>
+                        <div class="tabs">
+                            <div class="tab active" onclick="switchTab(this,'spreadsheet')">Spreadsheet</div>
+                        </div>
                         <div id="spreadsheetTab" class="tab-content active">
                             <div id="spreadsheetStatus" style="margin-bottom: 15px; font-weight: bold;"></div>
-                            <div class="form-group"><label for="spreadsheetUrl"><i class="fas fa-table"></i> Your Google Sheet URL</label><input type="url" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/..."></div>
-                            <button class="btn btn-primary" onclick="handleSaveSpreadsheet()"><i class="fas fa-save"></i> SAVE</button>
+                            <div class="form-group">
+                                <label for="spreadsheetUrl"><i class="fas fa-table"></i> Your Google Sheet URL</label>
+                                <input type="url" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/...">
+                            </div>
+                            <button class="btn btn-primary" onclick="handleSaveSpreadsheet()">
+                                <i class="fas fa-save"></i> SAVE
+                            </button>
                         </div>
                     </div>
                 </div>
-                <div class="status-container"><div id="status"></div></div>
+                
+                <div class="status-container">
+                    <div id="status"></div>
+                </div>
             </div>
-            <div class="panel"><h2><i class="fas fa-info-circle"></i> Instructions</h2><p style="line-height:1.6;"><strong>1. Register:</strong> Create a new account.<br><strong>2. Login:</strong> Sign into the dashboard.<br><strong>3. Forgot Password:</strong> Click the link on the login screen to receive a reset code via email.<br><strong>4. Reset:</strong> Use the code to set a new password and log in.</p></div>
+            
+            <div class="panel">
+                <h2><i class="fas fa-info-circle"></i> Instructions</h2>
+                <p style="line-height:1.6;">
+                    <strong>1. Register:</strong> Create a new account.<br>
+                    <strong>2. Login:</strong> Sign into the dashboard.<br>
+                    <strong>3. Forgot Password:</strong> Click the link on the login screen to receive a reset code via email.<br>
+                    <strong>4. Reset:</strong> Use the code to set a new password and log in.
+                </p>
+            </div>
         </div>
     </div>
 
-    <!-- MODALS FOR PASSWORD RESET -->
+    <!-- FORGOT PASSWORD MODAL -->
     <div class="modal" id="forgotPasswordModal">
         <div class="modal-content">
             <h2><i class="fas fa-key"></i> Forgot Password</h2>
@@ -112,6 +183,7 @@
         </div>
     </div>
     
+    <!-- RESET PASSWORD MODAL -->
     <div class="modal" id="resetPasswordModal">
         <div class="modal-content">
             <h2><i class="fas fa-lock"></i> Reset Your Password</h2>
@@ -133,7 +205,7 @@
             </div>
         </div>
     </div>
-    
+
 <script>
     const API_BASE = window.location.origin;
     let userSecretKey = '';
@@ -260,16 +332,29 @@
         
         resetEmail = email;
         
+        console.log("Sending forgot password request for:", email);
+        
         const result = await apiRequest('/forgot_password', {
             method: 'POST',
             body: JSON.stringify({ email })
         });
         
         if (result) {
-            // SUCCESS - Show the reset password modal immediately
-            hideModals();
-            showResetPasswordModal();
-            showStatus("Reset code sent to your email. Check your inbox.", "success");
+            console.log("Forgot password success, showing reset modal");
+            
+            // HIDE the forgot password modal
+            document.getElementById('forgotPasswordModal').style.display = 'none';
+            
+            // SHOW the reset password modal immediately
+            document.getElementById('resetPasswordModal').style.display = 'flex';
+            
+            // If we're in debug mode and got a code, show it to the user
+            if (result.debug_code) {
+                showStatus(`Reset code: ${result.debug_code}`, "success");
+                document.getElementById('resetCode').value = result.debug_code;
+            } else {
+                showStatus("Reset code sent to your email. Check your inbox (and spam folder).", "success");
+            }
         }
     }
 
@@ -336,6 +421,7 @@
     }
 
     function hideModals() { 
+        console.log("Hiding all modals");
         const modals = document.querySelectorAll('.modal');
         modals.forEach(modal => {
             modal.style.display = 'none';
@@ -343,12 +429,14 @@
     }
     
     function showForgotPasswordModal() { 
+        console.log("Showing forgot password modal");
         hideModals();
         document.getElementById('forgotEmail').value = '';
         document.getElementById('forgotPasswordModal').style.display = 'flex'; 
     }
     
     function showResetPasswordModal() { 
+        console.log("Showing reset password modal");
         hideModals();
         document.getElementById('resetCode').value = '';
         document.getElementById('newPassword').value = '';
@@ -380,6 +468,7 @@
         const modals = document.querySelectorAll('.modal');
         modals.forEach(modal => {
             if (event.target === modal) {
+                console.log("Closing modal by clicking outside");
                 modal.style.display = 'none';
             }
         });
@@ -405,6 +494,13 @@
                 handleResetPassword();
             }
         }
+    });
+
+    // Initialize - make sure everything is reset on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("DOM loaded - application ready");
+        hideModals(); // Ensure all modals are hidden on startup
+        showLogin(); // Show login form by default
     });
 </script>
 </body>
