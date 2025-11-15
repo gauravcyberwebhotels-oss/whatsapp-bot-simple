@@ -502,6 +502,20 @@
         .supabase-status.offline {
             background: var(--danger);
         }
+        
+        /* Logout button */
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -558,6 +572,9 @@
                         <p style="text-align: center; margin-top: 15px;">
                             Don't have an account? <a href="javascript:void(0)" onclick="showRegister()" style="color: var(--primary);">Register here</a>
                         </p>
+                        <p style="text-align: center; margin-top: 10px;">
+                            <a href="javascript:void(0)" onclick="showForgotPassword()" style="color: var(--primary); font-size: 0.9rem;">Forgot Password?</a>
+                        </p>
                     </div>
                   
                     <div class="auth-form" id="registerForm" style="display:none">
@@ -568,7 +585,7 @@
                         </div>
                         <div class="form-group">
                             <label for="registerPassword">Password</label>
-                            <input type="password" id="registerPassword" placeholder="Create a password">
+                            <input type="password" id="registerPassword" placeholder="Create a password (min 8 characters)">
                         </div>
                         <button class="btn btn-primary" onclick="registerWithValidation()">
                             <i class="fas fa-user-plus"></i> Register
@@ -580,6 +597,9 @@
                 </div>
                 <!-- DASHBOARD SECTION (SHOWN AFTER LOGIN) -->
                 <div id="dashboardSection" style="display:none">
+                    <button class="logout-btn" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
                     <h2><i class="fas fa-rocket"></i> Bot Control Center</h2>
                   
                     <div class="user-info">
@@ -765,29 +785,56 @@
             </div>
         </div>
     </div>
-    <!-- BOT STATUS MODAL -->
-    <div class="modal" id="botStatusModal">
+    <!-- FORGOT PASSWORD MODAL -->
+    <div class="modal" id="forgotPasswordModal">
         <div class="modal-content">
-            <h2><i class="fas fa-robot"></i> Bot Status</h2>
-            <div id="botStatusContent">
-                <!-- Bot status content will be populated here -->
+            <h2><i class="fas fa-key"></i> Reset Password</h2>
+            <div class="form-group">
+                <label for="forgotEmail">Email Address</label>
+                <input type="email" id="forgotEmail" placeholder="your@email.com">
             </div>
-            <div class="btn-group" style="margin-top: 20px;">
-                <button class="btn btn-secondary" onclick="hideBotStatusModal()">
-                    <i class="fas fa-times"></i> Close
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="sendResetCode()">
+                    <i class="fas fa-paper-plane"></i> Send Reset Code
+                </button>
+                <button class="btn btn-secondary" onclick="hideForgotPasswordModal()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- RESET PASSWORD MODAL -->
+    <div class="modal" id="resetPasswordModal">
+        <div class="modal-content">
+            <h2><i class="fas fa-key"></i> Set New Password</h2>
+            <div class="form-group">
+                <label for="resetCode">Reset Code</label>
+                <input type="text" id="resetCode" placeholder="Enter reset code">
+            </div>
+            <div class="form-group">
+                <label for="newPassword">New Password</label>
+                <input type="password" id="newPassword" placeholder="Enter new password">
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="resetPassword()">
+                    <i class="fas fa-check"></i> Reset Password
+                </button>
+                <button class="btn btn-secondary" onclick="hideResetPasswordModal()">
+                    <i class="fas fa-times"></i> Cancel
                 </button>
             </div>
         </div>
     </div>
     <script>
-    // API Configuration - UPDATE THIS TO YOUR BACKEND URL
-const API_BASE = window.location.origin; // This automatically uses current domain
+    // API Configuration - Uses current domain
+    const API_BASE = window.location.origin;
 
     // User data
     let userSecretKey = '';
     let userEmail = '';
     let botStatusInterval = null;
     let activityUpdateInterval = null;
+    let progressInterval = null;
 
     // Authentication functions
     async function registerWithValidation() {
@@ -802,8 +849,8 @@ const API_BASE = window.location.origin; // This automatically uses current doma
             showStatus('Please enter a valid email address', 'error');
             return;
         }
-        if (password.length < 6) {
-            showStatus('Password must be at least 6 characters long', 'error');
+        if (password.length < 8) {
+            showStatus('Password must be at least 8 characters long', 'error');
             return;
         }
        
@@ -1046,7 +1093,7 @@ const API_BASE = window.location.origin; // This automatically uses current doma
                 addBotLog('🔄 Bot is now running on: ' + result.assigned_server, 'info');
                 addBotLog('📊 Processing your spreadsheet data...', 'info');
               
-                simulateBotProgress();
+                startProgressMonitoring();
                 updateBotStatus();
             } else {
                 throw new Error(result.error || result.message || 'Failed to start bot');
@@ -1093,6 +1140,11 @@ const API_BASE = window.location.origin; // This automatically uses current doma
                 document.getElementById('qrSection').style.display = 'none';
                 document.getElementById('progressFill').style.width = '0%';
               
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
+              
                 updateBotStatus();
             } else {
                 throw new Error(result.error || result.message || 'Failed to stop bot');
@@ -1107,18 +1159,50 @@ const API_BASE = window.location.origin; // This automatically uses current doma
         }
     }
 
-    function simulateBotProgress() {
-        let progress = 0;
-        const progressBar = document.getElementById('progressFill');
-        const interval = setInterval(() => {
-            progress += Math.random() * 5;
-            if (progress >= 100) {
-                progress = 100;
-                clearInterval(interval);
-                addBotLog('🎉 Bot completed processing all contacts!', 'success');
+    async function startProgressMonitoring() {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+        }
+        
+        progressInterval = setInterval(async () => {
+            if (!userSecretKey) return;
+            
+            try {
+                const response = await fetch(API_BASE + '/progress', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({secret_key: userSecretKey})
+                });
+              
+                const result = await response.json();
+              
+                if (response.ok && result.status === 'success' && result.progress) {
+                    const progress = result.progress;
+                    const progressBar = document.getElementById('progressFill');
+                    
+                    // Update progress bar based on actual progress
+                    if (progress.processed && progress.total_contacts) {
+                        const percentage = (progress.processed / progress.total_contacts) * 100;
+                        progressBar.style.width = percentage + '%';
+                    }
+                    
+                    // Update bot log with real progress
+                    if (progress.current_contact) {
+                        addBotLog(`📞 Processing: ${progress.current_contact}`, 'info');
+                    }
+                    
+                    if (progress.status === 'completed') {
+                        addBotLog('🎉 Bot completed processing all contacts!', 'success');
+                        if (progressInterval) {
+                            clearInterval(progressInterval);
+                            progressInterval = null;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Progress monitoring error:', error);
             }
-            progressBar.style.width = progress + '%';
-        }, 1000);
+        }, 5000);
     }
 
     function addBotLog(message, type = 'info') {
@@ -1156,6 +1240,12 @@ const API_BASE = window.location.origin; // This automatically uses current doma
                 if (result.spreadsheet_url) {
                     document.getElementById('spreadsheetUrl').value = result.spreadsheet_url;
                 }
+                
+                // Update activity stats
+                document.getElementById('totalActivities').textContent = result.total_activities || 0;
+                document.getElementById('filesUploaded').textContent = result.files_uploaded || 0;
+                document.getElementById('botSessionsCount').textContent = result.bot_sessions || 0;
+                document.getElementById('firstSeen').textContent = result.first_seen ? new Date(result.first_seen).toLocaleDateString() : '-';
             }
         } catch (error) {
             handleFetchError(error, 'load profile');
@@ -1168,7 +1258,8 @@ const API_BASE = window.location.origin; // This automatically uses current doma
         if (!userSecretKey) return;
       
         try {
-            const response = await fetch(API_BASE + '/user/activity', {
+            // Since we don't have a direct activity endpoint, we'll use the profile data
+            const response = await fetch(API_BASE + '/user/profile', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({secret_key: userSecretKey})
@@ -1176,43 +1267,38 @@ const API_BASE = window.location.origin; // This automatically uses current doma
           
             const result = await response.json();
           
-            if (response.ok && result.user_data) {
-                const userData = result.user_data;
-              
-                document.getElementById('totalActivities').textContent = userData.total_activities || 0;
-                document.getElementById('filesUploaded').textContent = userData.files_uploaded || 0;
-                document.getElementById('botSessionsCount').textContent = userData.bot_sessions || 0;
-                document.getElementById('firstSeen').textContent = userData.first_seen ? new Date(userData.first_seen).toLocaleDateString() : '-';
-              
-                updateActivityHistory(userData.activity_history || []);
+            if (response.ok) {
+                updateActivityHistory(result.activity_counts || {});
             }
         } catch (error) {
             handleFetchError(error, 'load activity');
         }
     }
 
-    function updateActivityHistory(activities) {
+    function updateActivityHistory(activityCounts) {
         const activityContainer = document.getElementById('activityHistory');
         activityContainer.innerHTML = '';
       
-        const recentActivities = activities.slice(-10).reverse();
-      
-        recentActivities.forEach(activity => {
+        // Create activity items from counts
+        Object.entries(activityCounts).forEach(([activityType, count]) => {
             const activityItem = document.createElement('div');
             activityItem.className = 'activity-item';
           
-            const time = new Date(activity.timestamp).toLocaleString();
-            const type = activity.activity_type.replace(/_/g, ' ').toUpperCase();
-            const details = activity.details ? JSON.stringify(activity.details) : '';
-          
+            const type = activityType.replace(/_/g, ' ').toUpperCase();
+            const time = new Date().toLocaleString(); // Since we don't have timestamps, use current time
+            
             activityItem.innerHTML = `
                 <div class="activity-type">${type}</div>
-                <div class="activity-time">${time}</div>
-                ${details ? `<div style="font-size: 0.8rem; color: #6b7280;">${details}</div>` : ''}
+                <div class="activity-time">Count: ${count} - Last: ${time}</div>
             `;
           
             activityContainer.appendChild(activityItem);
         });
+        
+        // If no activities, show message
+        if (Object.keys(activityCounts).length === 0) {
+            activityContainer.innerHTML = '<div class="activity-item">No activities recorded yet</div>';
+        }
     }
 
     async function updateBotStatus() {
@@ -1230,11 +1316,11 @@ const API_BASE = window.location.origin; // This automatically uses current doma
             if (response.ok && result.status !== 'no_active_session') {
                 document.getElementById('botStatusDisplay').textContent = result.status;
                 document.getElementById('assignedServer').textContent = result.assigned_server;
-                document.getElementById('startedAt').textContent = result.started_at;
+                document.getElementById('startedAt').textContent = new Date(result.started_at).toLocaleString();
                 document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
               
                 const stopBtn = document.getElementById('stopBtn');
-                if (result.status === 'running') {
+                if (result.status === 'running' || result.status === 'starting') {
                     stopBtn.disabled = false;
                     document.getElementById('botStatusDisplay').innerHTML = '<span style="color: var(--success);">🟢 RUNNING (24/7)</span>';
                     document.getElementById('qrSection').style.display = 'block';
@@ -1263,34 +1349,40 @@ const API_BASE = window.location.origin; // This automatically uses current doma
         activityUpdateInterval = setInterval(loadUserActivity, 30000);
       
         setInterval(checkServerStatus, 60000);
+        
+        // Initial updates
+        updateBotStatus();
+        loadUserActivity();
     }
 
     async function checkServerStatus() {
         try {
-            const response = await fetch(API_BASE + '/server_status');
+            const response = await fetch(API_BASE + '/stats');
             const result = await response.json();
           
             const serverStatusDiv = document.getElementById('serverStatus');
-            serverStatusDiv.innerHTML = '';
-          
-            let onlineServers = 0;
-          
-            for (const [server, status] of Object.entries(result.servers)) {
-                const serverDiv = document.createElement('div');
-                serverDiv.className = 'server-status';
+            if (serverStatusDiv && result.server_stats) {
+                serverStatusDiv.innerHTML = '';
               
-                const statusDot = document.createElement('span');
-                statusDot.className = status ? 'status-dot status-online' : 'status-dot status-offline';
-                serverDiv.appendChild(statusDot);
+                let onlineServers = 0;
               
-                const serverName = server.split('//')[1].split('.')[0];
-                serverDiv.innerHTML += `${serverName} - <span style="color: ${status ? 'var(--success)' : 'var(--danger)'};">${status ? 'ONLINE' : 'OFFLINE'}</span>`;
+                for (const [server, status] of Object.entries(result.server_stats.server_status || {})) {
+                    const serverDiv = document.createElement('div');
+                    serverDiv.className = 'server-status';
+                  
+                    const statusDot = document.createElement('span');
+                    statusDot.className = status ? 'status-dot status-online' : 'status-dot status-offline';
+                    serverDiv.appendChild(statusDot);
+                  
+                    const serverName = server.split('//')[1].split('.')[0];
+                    serverDiv.innerHTML += `${serverName} - <span style="color: ${status ? 'var(--success)' : 'var(--danger)'};">${status ? 'ONLINE' : 'OFFLINE'}</span>`;
+                  
+                    serverStatusDiv.appendChild(serverDiv);
+                    if (status) onlineServers++;
+                }
               
-                serverStatusDiv.appendChild(serverDiv);
-                if (status) onlineServers++;
+                document.getElementById('serverCount').textContent = onlineServers;
             }
-          
-            document.getElementById('serverCount').textContent = onlineServers;
           
         } catch (error) {
             handleFetchError(error, 'server status');
@@ -1305,7 +1397,6 @@ const API_BASE = window.location.origin; // This automatically uses current doma
                 const result = await response.json();
                 document.getElementById('totalUsers').textContent = result.total_users || '0';
                 document.getElementById('activeBots').textContent = result.active_bots || '0';
-                document.getElementById('serverCount').textContent = result.server_count || '5';
                 
                 // Update Supabase status
                 const supabaseStatus = document.getElementById('supabaseStatus');
@@ -1324,6 +1415,102 @@ const API_BASE = window.location.origin; // This automatically uses current doma
         }
     }
 
+    // Password reset functions
+    function showForgotPassword() {
+        document.getElementById('forgotPasswordModal').style.display = 'flex';
+    }
+
+    function hideForgotPasswordModal() {
+        document.getElementById('forgotPasswordModal').style.display = 'none';
+    }
+
+    function showResetPasswordModal() {
+        document.getElementById('resetPasswordModal').style.display = 'flex';
+    }
+
+    function hideResetPasswordModal() {
+        document.getElementById('resetPasswordModal').style.display = 'none';
+    }
+
+    async function sendResetCode() {
+        const email = document.getElementById('forgotEmail').value;
+
+        if (!email) {
+            showStatus('Please enter your email address', 'error');
+            return;
+        }
+
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        showStatus('Sending reset code...', 'loading');
+
+        try {
+            const response = await fetch(API_BASE + '/forgot_password', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email})
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                hideForgotPasswordModal();
+                showResetPasswordModal();
+                showStatus('Reset code sent to your email!', 'success');
+            } else {
+                throw new Error(result.error || 'Failed to send reset code');
+            }
+        } catch (error) {
+            handleFetchError(error, 'send reset code');
+        } finally {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    }
+
+    async function resetPassword() {
+        const email = document.getElementById('forgotEmail').value;
+        const code = document.getElementById('resetCode').value;
+        const newPassword = document.getElementById('newPassword').value;
+
+        if (!email || !code || !newPassword) {
+            showStatus('Please fill all fields', 'error');
+            return;
+        }
+
+        if (newPassword.length < 8) {
+            showStatus('Password must be at least 8 characters long', 'error');
+            return;
+        }
+
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        showStatus('Resetting password...', 'loading');
+
+        try {
+            const response = await fetch(API_BASE + '/reset_password', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    email,
+                    code,
+                    new_password: newPassword
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                hideResetPasswordModal();
+                showLogin();
+                showStatus('Password reset successfully! Please login with your new password.', 'success');
+            } else {
+                throw new Error(result.error || 'Failed to reset password');
+            }
+        } catch (error) {
+            handleFetchError(error, 'reset password');
+        } finally {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    }
+
     // UI Management functions
     function showDashboard() {
         document.getElementById('authSection').style.display = 'none';
@@ -1333,6 +1520,8 @@ const API_BASE = window.location.origin; // This automatically uses current doma
     function showLogin() {
         document.getElementById('registerForm').style.display = 'none';
         document.getElementById('loginForm').style.display = 'block';
+        hideForgotPasswordModal();
+        hideResetPasswordModal();
     }
 
     function showRegister() {
@@ -1346,14 +1535,6 @@ const API_BASE = window.location.origin; // This automatically uses current doma
 
     function hideVerificationModal() {
         document.getElementById('verificationModal').style.display = 'none';
-    }
-
-    function showBotStatusModal() {
-        document.getElementById('botStatusModal').style.display = 'flex';
-    }
-
-    function hideBotStatusModal() {
-        document.getElementById('botStatusModal').style.display = 'none';
     }
 
     function showStatus(message, type) {
@@ -1422,24 +1603,6 @@ const API_BASE = window.location.origin; // This automatically uses current doma
             });
         }
 
-        // Login button handler
-        const loginBtn = document.querySelector('#loginForm button');
-        if (loginBtn) {
-            loginBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                loginWithValidation();
-            });
-        }
-       
-        // Register button handler
-        const registerBtn = document.querySelector('#registerForm button');
-        if (registerBtn) {
-            registerBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                registerWithValidation();
-            });
-        }
-
         // Enter key handlers
         document.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -1458,12 +1621,6 @@ const API_BASE = window.location.origin; // This automatically uses current doma
             }
         });
 
-        // Verification modal handler
-        const verifyBtn = document.querySelector('#verificationModal .btn-primary');
-        if (verifyBtn) {
-            verifyBtn.addEventListener('click', verifyEmail);
-        }
-
         // Spreadsheet enter key handler
         const spreadsheetInput = document.getElementById('spreadsheetUrl');
         if (spreadsheetInput) {
@@ -1475,23 +1632,9 @@ const API_BASE = window.location.origin; // This automatically uses current doma
         }
     }
 
-    function enableAllButtons() {
-        document.querySelectorAll('button').forEach(btn => {
-            btn.disabled = false;
-            btn.style.pointerEvents = 'auto';
-            btn.style.opacity = '1';
-        });
-    }
-
     function isValidEmail(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
-    }
-
-    function formatDate(dateString) {
-        if (!dateString) return '-';
-        const date = new Date(dateString);
-        return date.toLocaleString();
     }
 
     function saveUserSession() {
@@ -1515,8 +1658,18 @@ const API_BASE = window.location.origin; // This automatically uses current doma
         showLogin();
         showStatus('Logged out successfully', 'success');
       
-        if (botStatusInterval) clearInterval(botStatusInterval);
-        if (activityUpdateInterval) clearInterval(activityUpdateInterval);
+        if (botStatusInterval) {
+            clearInterval(botStatusInterval);
+            botStatusInterval = null;
+        }
+        if (activityUpdateInterval) {
+            clearInterval(activityUpdateInterval);
+            activityUpdateInterval = null;
+        }
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
     }
 
     function handleFetchError(error, operation) {
@@ -1584,7 +1737,6 @@ const API_BASE = window.location.origin; // This automatically uses current doma
         console.log('🚀 WhatsApp Bulk Messenger Pro Frontend Initialized');
         console.log('API Base URL:', API_BASE);
       
-        enableAllButtons();
         setupFormHandlers();
        
         // Tab switching
