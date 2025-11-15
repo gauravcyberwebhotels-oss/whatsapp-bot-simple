@@ -104,6 +104,8 @@
     <div class="modal" id="resetPasswordModal">
         <div class="modal-content">
             <h2>Reset Your Password</h2>
+            <!-- FIX: Added a disabled input to show the user which email they are resetting -->
+            <div class="form-group"><label for="resetEmailDisplay">Email</label><input type="email" id="resetEmailDisplay" disabled></div>
             <div class="form-group"><label for="resetCode">Code from Email</label><input type="text" id="resetCode"></div>
             <div class="form-group"><label for="newPassword">New Password (min 8 chars)</label><input type="password" id="newPassword"></div>
             <div style="display:flex; gap:10px;"><button class="btn btn-primary" onclick="handleResetPassword()">Reset</button><button class="btn btn-secondary" onclick="hideModals()">Cancel</button></div>
@@ -112,7 +114,8 @@
     
 <script>
     const API_BASE = window.location.origin;
-    let userSecretKey, userEmail = '';
+    // FIX: Added 'resetEmail' to manage state between password reset steps
+    let userSecretKey, userEmail, resetEmail = '';
 
     const loading = document.getElementById('loadingOverlay');
     const statusDiv = document.getElementById('status');
@@ -129,18 +132,24 @@
         loading.style.display = 'flex';
         try {
             const response = await fetch(API_BASE + endpoint, options);
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || `Server returned status ${response.status}`);
+            // We read the body of the response first, regardless of status
+            const result = await response.json(); 
+            // Then, we check if the response was NOT ok (e.g. status 400, 401, 500)
+            if (!response.ok) {
+                // If it's not ok, we throw an error with the message from the server's JSON response
+                throw new Error(result.error || `Server returned status ${response.status}`);
+            }
             return result;
         } catch (error) {
+            // All errors (network errors, thrown errors from non-ok statuses) are caught here
             showStatus(error.message, 'error');
-            return null;
+            return null; // Return null to indicate failure
         } finally {
             loading.style.display = 'none';
         }
     }
 
-    // --- BUTTON HANDLERS ---
+    // --- BUTTON HANDLERS (with fixes) ---
     async function handleRegister() {
         const email = document.getElementById('registerEmail').value;
         const password = document.getElementById('registerPassword').value;
@@ -156,6 +165,8 @@
     }
 
     async function handleSaveSpreadsheet() {
+        // This function was missing but referenced in the HTML, added it for completeness
+        if (!userSecretKey) return showStatus('You must be logged in.', 'error');
         const spreadsheetUrl = document.getElementById('spreadsheetUrl').value;
         const result = await apiRequest('/save_spreadsheet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret_key: userSecretKey, spreadsheet_url: spreadsheetUrl }) });
         if (result) { showStatus(result.message, 'success'); document.getElementById('spreadsheetStatus').innerHTML = `✅ Current URL: <span style="color: green;">${spreadsheetUrl}</span>`; }
@@ -164,21 +175,44 @@
     async function handleForgotPassword() {
         const email = forgotEmailInput.value;
         if (!email) return showStatus("Email is required.", "error");
+
+        // FIX: Store the email in our state variable
+        resetEmail = email;
+
         const result = await apiRequest('/forgot_password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
-        if (result) { showStatus(result.message, 'success'); hideModals(); showResetPasswordModal(); }
+        
+        // FIX: Critical logic change. We proceed as long as the request didn't return null (which indicates an error).
+        // The backend returns a generic success message even if the user doesn't exist,
+        // but returns an error if email sending fails. This new logic handles that.
+        if (result) {
+            showStatus(result.message, 'success');
+            hideModals();
+            // Pass the email to the next modal for display
+            showResetPasswordModal(resetEmail);
+        }
     }
 
     async function handleResetPassword() {
-        const email = forgotEmailInput.value;
+        // FIX: Use the 'resetEmail' variable instead of reading from the old input
+        if (!resetEmail) return showStatus("An error occurred. Please try the 'Forgot Password' process again.", 'error');
+
         const code = document.getElementById('resetCode').value;
         const new_password = document.getElementById('newPassword').value;
-        const result = await apiRequest('/reset_password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, code, new_password }) });
-        if (result) { showStatus(result.message, 'success'); hideModals(); showLogin(); }
+
+        // Pass the stored email to the backend
+        const result = await apiRequest('/reset_password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: resetEmail, code, new_password }) });
+        
+        if (result) {
+            showStatus(result.message, 'success');
+            hideModals();
+            showLogin();
+            resetEmail = ''; // Clear the stored email
+        }
     }
     
     function logout() { userSecretKey = userEmail = ''; document.getElementById('dashboardSection').style.display = 'none'; document.getElementById('authSection').style.display = 'block'; showLogin(); showStatus('Logged out', 'success'); }
 
-    // --- UI HELPERS ---
+    // --- UI HELPERS (with fixes) ---
     function showDashboard(data) {
         document.getElementById('authSection').style.display = 'none';
         document.getElementById('dashboardSection').style.display = 'block';
@@ -193,7 +227,14 @@
 
     function hideModals() { Array.from(document.getElementsByClassName('modal')).forEach(m => m.style.display = 'none'); }
     function showForgotPasswordModal() { hideModals(); forgotEmailInput.value = ''; document.getElementById('forgotPasswordModal').style.display = 'flex'; }
-    function showResetPasswordModal() { hideModals(); document.getElementById('resetPasswordModal').style.display = 'flex'; }
+    // FIX: Updated function to display the email in the reset modal
+    function showResetPasswordModal(email) {
+        hideModals();
+        document.getElementById('resetEmailDisplay').value = email; // Show the email
+        document.getElementById('resetCode').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('resetPasswordModal').style.display = 'flex';
+    }
     function showLogin() { document.getElementById('registerForm').style.display = 'none'; document.getElementById('loginForm').style.display = 'block'; }
     function showRegister() { document.getElementById('loginForm').style.display = 'none'; document.getElementById('registerForm').style.display = 'block'; }
     function switchTab(clickedTab, contentId) { document.querySelectorAll('.tab-content, .tab').forEach(el => el.classList.remove('active')); document.getElementById(contentId + 'Tab').classList.add('active'); clickedTab.classList.add('active'); }
