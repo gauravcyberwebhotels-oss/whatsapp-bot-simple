@@ -35,7 +35,7 @@ except Exception as e:
 CORS(app, origins=[
     'https://whatsapp-bot-simple.onrender.com',
     'http://localhost:3000',
-    'https://your-frontend-domain.onrender.com',  # ADD YOUR ACTUAL FRONTEND DOMAIN
+    'https://whatsapp-bot-simple.onrender.com',  # ADD YOUR ACTUAL FRONTEND DOMAIN
     'http://localhost:5000',
     '*'
 ])
@@ -2665,3 +2665,4 @@ if __name__ == "__main__":
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
