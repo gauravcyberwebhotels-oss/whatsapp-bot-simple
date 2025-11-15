@@ -65,6 +65,17 @@
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .logout-btn { position: absolute; top: 20px; right: 20px; background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        
+        /* Debug info styling */
+        .debug-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #856404;
+        }
     </style>
 </head>
 <body>
@@ -157,9 +168,13 @@
                 <p style="line-height:1.6;">
                     <strong>1. Register:</strong> Create a new account.<br>
                     <strong>2. Login:</strong> Sign into the dashboard.<br>
-                    <strong>3. Forgot Password:</strong> Click the link on the login screen to receive a reset code via email.<br>
-                    <strong>4. Reset:</strong> Use the code to set a new password and log in.
+                    <strong>3. Forgot Password:</strong> Click the link on the login screen to receive a reset code.<br>
+                    <strong>4. Reset:</strong> Use the auto-filled code to set a new password and log in.
                 </p>
+                <div class="debug-info">
+                    <strong>🔧 DEBUG MODE ACTIVE</strong><br>
+                    Reset codes are auto-filled for testing. Email service is temporarily disabled.
+                </div>
             </div>
         </div>
     </div>
@@ -187,8 +202,15 @@
     <div class="modal" id="resetPasswordModal">
         <div class="modal-content">
             <h2><i class="fas fa-lock"></i> Reset Your Password</h2>
+            
+            <div class="debug-info">
+                <strong>🔧 DEBUG MODE</strong><br>
+                Code auto-filled: <strong>556661</strong><br>
+                Email service temporarily unavailable
+            </div>
+            
             <div class="form-group">
-                <label for="resetCode">6-digit Code from Email</label>
+                <label for="resetCode">6-digit Code</label>
                 <input type="text" id="resetCode" placeholder="Enter 6-digit code" maxlength="6">
             </div>
             <div class="form-group">
@@ -348,13 +370,11 @@
             // SHOW the reset password modal immediately
             document.getElementById('resetPasswordModal').style.display = 'flex';
             
-            // If we're in debug mode and got a code, show it to the user
-            if (result.debug_code) {
-                showStatus(`Reset code: ${result.debug_code}`, "success");
-                document.getElementById('resetCode').value = result.debug_code;
-            } else {
-                showStatus("Reset code sent to your email. Check your inbox (and spam folder).", "success");
-            }
+            // AUTO-FILL THE DEBUG CODE 556661
+            const debugCode = "556661";
+            document.getElementById('resetCode').value = debugCode;
+            
+            showStatus(`Reset code generated! Using debug code: ${debugCode}`, "success");
         }
     }
 
@@ -438,7 +458,7 @@
     function showResetPasswordModal() { 
         console.log("Showing reset password modal");
         hideModals();
-        document.getElementById('resetCode').value = '';
+        document.getElementById('resetCode').value = '556661'; // Auto-fill debug code
         document.getElementById('newPassword').value = '';
         document.getElementById('resetPasswordModal').style.display = 'flex'; 
     }
@@ -499,6 +519,7 @@
     // Initialize - make sure everything is reset on page load
     document.addEventListener('DOMContentLoaded', function() {
         console.log("DOM loaded - application ready");
+        console.log("DEBUG MODE: Reset code 556661 is auto-filled");
         hideModals(); // Ensure all modals are hidden on startup
         showLogin(); // Show login form by default
     });
