@@ -18,23 +18,22 @@
         .panel h2 { color: var(--dark); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-size: 1.5rem; }
         .form-group { margin-bottom: 25px; }
         label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark); }
-        input, textarea { width: 100%; padding: 15px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 16px; transition: all 0.3s; }
-        input:focus, textarea:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        input { width: 100%; padding: 15px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 16px; transition: all 0.3s; }
+        input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
         .btn-group { display: flex; gap: 15px; margin: 25px 0; }
         .btn { flex: 1; padding: 15px 25px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; }
         .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
         .status-container { margin-top: 25px; }
-        .status { padding: 20px; border-radius: 10px; margin-bottom: 15px; display: none; }
+        .status { padding: 20px; border-radius: 10px; margin-bottom: 15px; display: none; text-align: center; font-weight: 600;}
         .status-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
         .status-error { background: #fee2e2; color: #7f1d1d; border: 1px solid #fca5a5; }
-        .status-loading { background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd; }
         .status-warning { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
         .user-info { background: white; padding: 20px; border-radius: 10px; border: 2px solid #e5e7eb; margin-bottom: 20px; }
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .info-item { display: flex; flex-direction: column; }
         .info-label { font-size: 0.9rem; color: #6b7280; margin-bottom: 5px; }
-        .info-value { font-size: 1.1rem; font-weight: 600; color: var(--dark); word-break: break-all;}
+        .info-value { font-size: 1rem; font-weight: 600; color: var(--dark); word-break: break-all;}
         .auth-form { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .tab-container { margin: 20px 0; }
         .tabs { display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
@@ -42,7 +41,7 @@
         .tab.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: 600; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; z-index: 999; justify-content: center; align-items: center; }
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; z-index: 999; justify-content: center; align-items: center; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .logout-btn { position: absolute; top: 20px; right: 20px; background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
@@ -57,12 +56,10 @@
         </div>
       
         <div class="main-content">
-            <!-- LEFT PANEL - AUTHENTICATION & CONTROLS -->
             <div class="panel">
-                <!-- AUTH SECTION -->
                 <div id="authSection">
                     <div class="auth-form" id="loginForm">
-                        <h2><i class="fas fa-sign-in-alt"></i> Login to Your Account</h2>
+                        <h2><i class="fas fa-sign-in-alt"></i> Login</h2>
                         <div class="form-group">
                             <label for="loginEmail">Email Address</label>
                             <input type="email" id="loginEmail" placeholder="your@email.com">
@@ -71,14 +68,13 @@
                             <label for="loginPassword">Password</label>
                             <input type="password" id="loginPassword" placeholder="Your password">
                         </div>
-                        <button class="btn btn-primary" onclick="login()">
+                        <button class="btn btn-primary" onclick="handleLogin()">
                             <i class="fas fa-sign-in-alt"></i> Login
                         </button>
                         <p style="text-align: center; margin-top: 15px;">
-                            Don't have an account? <a href="javascript:void(0)" onclick="showRegister()" style="color: var(--primary);">Register here</a>
+                            No account? <a href="javascript:void(0)" onclick="showRegister()">Register here</a>
                         </p>
                     </div>
-                  
                     <div class="auth-form" id="registerForm" style="display:none">
                         <h2><i class="fas fa-user-plus"></i> Create Account</h2>
                         <div class="form-group">
@@ -86,43 +82,27 @@
                             <input type="email" id="registerEmail" placeholder="your@email.com">
                         </div>
                         <div class="form-group">
-                            <label for="registerPassword">Password</label>
-                            <input type="password" id="registerPassword" placeholder="Create a password (min 8 characters)">
+                            <label for="registerPassword">Password (min 8 characters)</label>
+                            <input type="password" id="registerPassword" placeholder="Create a password">
                         </div>
-                        <button class="btn btn-primary" onclick="register()">
+                        <button class="btn btn-primary" onclick="handleRegister()">
                             <i class="fas fa-user-plus"></i> Register
                         </button>
                         <p style="text-align: center; margin-top: 15px;">
-                            Already have an account? <a href="javascript:void(0)" onclick="showLogin()" style="color: var(--primary);">Login here</a>
+                            Have an account? <a href="javascript:void(0)" onclick="showLogin()">Login here</a>
                         </p>
                     </div>
                 </div>
                 
-                <!-- DASHBOARD SECTION (SHOWN AFTER LOGIN) -->
                 <div id="dashboardSection" style="display:none">
-                    <button class="logout-btn" onclick="logout()">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </button>
+                    <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
                     <h2><i class="fas fa-rocket"></i> Demo Dashboard</h2>
-                  
                     <div class="user-info">
                         <div class="info-grid">
-                            <div class="info-item">
-                                <span class="info-label">Your Email</span>
-                                <span class="info-value" id="userEmail">-</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Credits Remaining</span>
-                                <span class="info-value" id="userCredits">0</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Account Status</span>
-                                <span class="info-value" id="userStatus">-</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Secret Key</span>
-                                <span class="info-value" id="userSecretKey">-</span>
-                            </div>
+                            <div class="info-item"><span class="info-label">Email</span><span class="info-value" id="userEmail"></span></div>
+                            <div class="info-item"><span class="info-label">Credits</span><span class="info-value" id="userCredits"></span></div>
+                            <div class="info-item"><span class="info-label">Status</span><span class="info-value" id="userStatus"></span></div>
+                            <div class="info-item"><span class="info-label">Secret Key</span><span class="info-value" id="userSecretKey"></span></div>
                         </div>
                     </div>
                     <div class="tab-container">
@@ -130,41 +110,31 @@
                             <div class="tab active" onclick="switchTab('spreadsheet')">Spreadsheet</div>
                             <div class="tab" onclick="switchTab('botControl')">Bot Control (Coming Soon)</div>
                         </div>
-                        <!-- SPREADSHEET TAB -->
                         <div id="spreadsheetTab" class="tab-content active">
                             <div id="spreadsheetStatus" style="margin-bottom: 15px; font-weight: bold; word-break: break-all;"></div>
                             <div class="form-group">
                                 <label for="spreadsheetUrl"><i class="fas fa-table"></i> Your Google Sheet URL</label>
-                                <input type="url" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/d/your-sheet-id/edit" required>
-                                <small style="color: #6b7280; font-size: 0.9rem;">
-                                    📋 Enter a valid Google Sheet URL and click save.
-                                </small>
+                                <input type="url" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/d/your-sheet-id/edit">
+                                <small style="color: #6b7280;">Enter a valid URL and click save.</small>
                             </div>
-                            <div class="btn-group">
-                                <button class="btn btn-primary" onclick="handleSaveSpreadsheet()" id="saveSheetBtn">
-                                    <i class="fas fa-save"></i> SAVE SPREADSHEET
-                                </button>
-                            </div>
+                            <button class="btn btn-primary" onclick="handleSaveSpreadsheet()"><i class="fas fa-save"></i> SAVE</button>
                         </div>
-                        <!-- BOT CONTROL TAB (PLACEHOLDER) -->
                         <div id="botControlTab" class="tab-content">
-                            <h3>Bot management will be here.</h3>
-                            <p>This section is currently under development.</p>
+                            <h3>Bot management features will appear here.</h3>
                         </div>
-                    </div>
-                    <div class="status-container">
-                        <div id="status" class="status"></div>
                     </div>
                 </div>
+                 <div class="status-container"><div id="status" class="status"></div></div>
             </div>
 
-            <!-- RIGHT PANEL (SIMPLIFIED) -->
             <div class="panel">
                 <h2><i class="fas fa-info-circle"></i> Instructions</h2>
-                <p><strong>1. Register:</strong> Create an account using the form on the left.</p>
-                <p><strong>2. Login:</strong> Use your new credentials to log into the demo dashboard.</p>
-                <p><strong>3. Save URL:</strong> In the "Spreadsheet" tab, enter a Google Sheet URL and save it.</p>
-                <p><strong>4. Verify:</strong> Logout and log back in. Your saved URL should still be there, confirming the database connection is working!</p>
+                <p style="line-height: 1.6;">
+                    <strong>1. Register:</strong> Create an account.
+                    <br><strong>2. Login:</strong> Sign in to the demo dashboard.
+                    <br><strong>3. Save URL:</strong> Go to the "Spreadsheet" tab, enter a Google Sheet URL, and save it.
+                    <br><strong>4. Verify:</strong> Logout and log back in. The saved URL will still be there, confirming the database is working perfectly!
+                </p>
             </div>
         </div>
     </div>
@@ -174,70 +144,89 @@
     let userSecretKey = '';
     let userEmail = '';
 
-    // --- Core Functions ---
-    function showStatus(message, type) {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    function showStatus(message, type = 'error') {
         const statusDiv = document.getElementById('status');
-        if (!statusDiv) return;
         statusDiv.textContent = message;
         statusDiv.className = `status status-${type}`;
         statusDiv.style.display = 'block';
-        if (type === 'success') {
-            setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
-        }
+        setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
     }
 
     async function apiRequest(endpoint, options) {
-        document.getElementById('loadingOverlay').style.display = 'flex';
+        loadingOverlay.style.display = 'flex';
         try {
             const response = await fetch(API_BASE + endpoint, options);
             const result = await response.json();
             if (!response.ok) {
-                throw new Error(result.error || `Request failed with status ${response.status}`);
+                // If the server returns an error, create an Error object to be caught below
+                throw new Error(result.error || `Server returned status ${response.status}`);
             }
-            return result;
+            return result; // Success
         } catch (error) {
             console.error(`API Error on ${endpoint}:`, error.message);
             showStatus(error.message, 'error');
-            throw error;
+            return null; // Failure
         } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
+            loadingOverlay.style.display = 'none';
         }
     }
 
-    // --- Authentication Logic ---
-    async function register() {
+    async function handleRegister() {
         const email = document.getElementById('registerEmail').value;
         const password = document.getElementById('registerPassword').value;
-        if (!email || !password) return showStatus('Please enter both email and password.', 'error');
-        if (password.length < 8) return showStatus('Password must be at least 8 characters long.', 'error');
-        try {
-            const result = await apiRequest('/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-            });
+        if (!email || !password) return showStatus('Email and password are required.', 'warning');
+        if (password.length < 8) return showStatus('Password must be at least 8 characters.', 'warning');
+        
+        const result = await apiRequest('/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+        
+        if (result) {
             showStatus(result.message, 'success');
             showLogin();
-        } catch (error) {/* Handled by apiRequest */}
+        }
     }
 
-    async function login() {
+    async function handleLogin() {
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
-        if (!email || !password) return showStatus('Please enter both email and password.', 'error');
-        try {
-            const result = await apiRequest('/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-            });
+        if (!email || !password) return showStatus('Email and password are required.', 'warning');
+        
+        const result = await apiRequest('/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+
+        if (result) {
             userEmail = email;
             userSecretKey = result.secret_key;
-            showStatus('Login successful!', 'success');
             showDashboard(result);
-        } catch (error) {/* Handled by apiRequest */}
+        }
     }
-    
+
+    async function handleSaveSpreadsheet() {
+        const spreadsheetUrl = document.getElementById('spreadsheetUrl').value;
+        if (!spreadsheetUrl || !spreadsheetUrl.startsWith('https://docs.google.com/spreadsheets/')) {
+            return showStatus("Please enter a valid Google Sheets URL.", "warning");
+        }
+        
+        const result = await apiRequest('/save_spreadsheet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ secret_key: userSecretKey, spreadsheet_url: spreadsheetUrl })
+        });
+        
+        if (result) {
+            showStatus(result.message, 'success');
+            updateSpreadsheetStatus(spreadsheetUrl);
+        }
+    }
+
     function logout() {
         userSecretKey = ''; 
         userEmail = '';
@@ -246,40 +235,29 @@
         showLogin();
         showStatus('Logged out successfully', 'success');
     }
-
-    // --- Dashboard Logic ---
-    async function handleSaveSpreadsheet() {
-        const spreadsheetUrl = document.getElementById('spreadsheetUrl').value;
-        if (!spreadsheetUrl) {
-            return showStatus("Spreadsheet URL cannot be empty.", "warning");
-        }
-        if (!spreadsheetUrl.startsWith('https://docs.google.com/spreadsheets/')) {
-            return showStatus("Please enter a valid Google Sheets URL.", "warning");
-        }
-        try {
-            const result = await apiRequest('/save_spreadsheet', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ secret_key: userSecretKey, spreadsheet_url: spreadsheetUrl })
-            });
-            showStatus(result.message, 'success');
-            updateSpreadsheetStatus(spreadsheetUrl); // Update the display instantly
-        } catch (error) {/* Handled by apiRequest */}
+    
+    function showDashboard(userData) {
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('dashboardSection').style.display = 'block';
+        document.getElementById('userEmail').textContent = userEmail;
+        document.getElementById('userCredits').textContent = userData.credits;
+        document.getElementById('userStatus').textContent = 'Verified';
+        document.getElementById('userSecretKey').textContent = userData.secret_key;
+        updateSpreadsheetStatus(userData.spreadsheet_url);
     }
-
+    
     function updateSpreadsheetStatus(url) {
         const statusDiv = document.getElementById('spreadsheetStatus');
         const urlInput = document.getElementById('spreadsheetUrl');
         if (url) {
-            statusDiv.innerHTML = `✅ Current URL Saved: <span style="color: green;">${url}</span>`;
+            statusDiv.innerHTML = `✅ Current URL: <span style="color: green;">${url}</span>`;
             urlInput.value = url;
         } else {
-            statusDiv.innerHTML = `🟡 No Spreadsheet URL has been saved yet.`;
+            statusDiv.innerHTML = `🟡 No URL saved.`;
             urlInput.value = '';
         }
     }
-
-    // --- UI Management ---
+    
     function showLogin() {
         document.getElementById('registerForm').style.display = 'none';
         document.getElementById('loginForm').style.display = 'block';
@@ -290,31 +268,13 @@
         document.getElementById('registerForm').style.display = 'block';
     }
 
-    function showDashboard(userData) {
-        document.getElementById('authSection').style.display = 'none';
-        document.getElementById('dashboardSection').style.display = 'block';
-        document.getElementById('userEmail').textContent = userEmail;
-        document.getElementById('userCredits').textContent = userData.credits;
-        document.getElementById('userStatus').textContent = 'Verified ✅';
-        document.getElementById('userSecretKey').textContent = userData.secret_key;
-        updateSpreadsheetStatus(userData.spreadsheet_url);
-    }
-    
     function switchTab(tabName) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-        
-        const content = document.getElementById(tabName + 'Tab');
-        if (content) content.classList.add('active');
-
-        const tab = Array.from(document.querySelectorAll('.tab')).find(el => el.textContent.toLowerCase().includes(tabName));
-        if (tab) tab.classList.add('active');
+        document.querySelectorAll('.tab-content, .tab').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabName + 'Tab')?.classList.add('active');
+        const tabEl = Array.from(document.querySelectorAll('.tab')).find(el => el.textContent.toLowerCase().includes(tabName));
+        if (tabEl) tabEl.classList.add('active');
     }
 
-    // --- Page Initialization ---
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log("✅ Demo Dashboard Initialized.");
-    });
 </script>
 </body>
 </html>
