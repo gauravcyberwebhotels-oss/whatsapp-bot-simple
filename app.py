@@ -47,10 +47,9 @@ app.config.from_object(Config)
 # Initialize extensions
 db = SQLAlchemy(app)
 limiter = Limiter(
-    app,
+    app=app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
-    storage_uri=app.config['RATELIMIT_STORAGE_URI'],
+    default_limits=["200 per day", "50 per hour"]
 )
 
 # Enhanced CORS configuration
