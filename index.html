@@ -6,516 +6,46 @@
     <title>WhatsApp Bulk Messenger Pro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-      
-        :root {
-            --primary: #667eea;
-            --secondary: #764ba2;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --dark: #1f2937;
-            --light: #f8fafc;
-        }
-      
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            min-height: 100vh;
-            padding: 20px;
-            color: var(--dark);
-        }
-      
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-      
-        .header {
-            background: linear-gradient(135deg, var(--dark) 0%, #374151 100%);
-            color: white;
-            padding: 40px 30px;
-            text-align: center;
-        }
-      
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-        }
-      
-        .stats-bar {
-            background: var(--light);
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-around;
-            border-bottom: 1px solid #e5e7eb;
-        }
-      
-        .stat-item {
-            text-align: center;
-        }
-      
-        .stat-number {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--primary);
-        }
-      
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            padding: 40px 30px;
-        }
-      
-        @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-        }
-      
-        .panel {
-            background: var(--light);
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-      
-        .panel h2 {
-            color: var(--dark);
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.5rem;
-        }
-      
-        .form-group {
-            margin-bottom: 25px;
-        }
-      
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: var(--dark);
-        }
-      
-        input, textarea {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e5e7eb;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: all 0.3s;
-        }
-      
-        input:focus, textarea:focus {
-            border-color: var(--primary);
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-      
-        .btn-group {
-            display: flex;
-            gap: 15px;
-            margin: 25px 0;
-        }
-      
-        .btn {
-            flex: 1;
-            padding: 15px 25px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-      
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            color: white;
-        }
-      
-        .btn-danger {
-            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
-            color: white;
-        }
-      
-        .btn-secondary {
-            background: #6b7280;
-            color: white;
-        }
-      
-        .btn-success {
-            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
-            color: white;
-        }
-      
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-      
-        .btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-      
-        .status-container {
-            margin-top: 25px;
-        }
-      
-        .status {
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            display: none;
-        }
-      
-        .status-success {
-            background: #d1fae5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
-        }
-      
-        .status-error {
-            background: #fee2e2;
-            color: #7f1d1d;
-            border: 1px solid #fca5a5;
-        }
-      
-        .status-loading {
-            background: #dbeafe;
-            color: #1e3a8a;
-            border: 1px solid #93c5fd;
-        }
-      
-        .status-warning {
-            background: #fef3c7;
-            color: #92400e;
-            border: 1px solid #fcd34d;
-        }
-      
-        .user-info {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            border: 2px solid #e5e7eb;
-            margin-bottom: 20px;
-        }
-      
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-      
-        .info-item {
-            display: flex;
-            flex-direction: column;
-        }
-      
-        .info-label {
-            font-size: 0.9rem;
-            color: #6b7280;
-            margin-bottom: 5px;
-        }
-      
-        .info-value {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--dark);
-        }
-      
-        .auth-form {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-      
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
-      
-        .feature {
-            text-align: center;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-      
-        .feature i {
-            font-size: 2rem;
-            color: var(--primary);
-            margin-bottom: 15px;
-        }
-        .feature-badge {
-            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            margin-top: 10px;
-            display: inline-block;
-        }
-      
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-      
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            max-width: 400px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        .uptime-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            background: var(--success);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-        .server-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 5px 0;
-        }
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-        .status-online {
-            background: var(--success);
-        }
-        .status-offline {
-            background: var(--danger);
-        }
-        .activity-section {
-            margin-top: 20px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        .activity-item {
-            padding: 10px;
-            border-left: 3px solid var(--primary);
-            background: white;
-            margin-bottom: 8px;
-            border-radius: 0 5px 5px 0;
-        }
-        .activity-time {
-            font-size: 0.8rem;
-            color: #6b7280;
-        }
-        .activity-type {
-            font-weight: 600;
-            color: var(--dark);
-        }
-        .bot-controls {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            border: 2px solid #e5e7eb;
-            margin: 20px 0;
-        }
-        .control-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 15px;
-        }
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: #e5e7eb;
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 10px 0;
-        }
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
-            transition: width 0.3s ease;
-        }
-        .activity-log {
-            background: #1f2937;
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
-            max-height: 200px;
-            overflow-y: auto;
-            margin-top: 15px;
-        }
-        .log-entry {
-            margin-bottom: 5px;
-            padding: 2px 0;
-        }
-        .log-time {
-            color: #9ca3af;
-        }
-        .log-success {
-            color: #10b981;
-        }
-        .log-error {
-            color: #ef4444;
-        }
-        .log-warning {
-            color: #f59e0b;
-        }
-        .log-info {
-            color: #3b82f6;
-        }
-        .qr-container {
-            text-align: center;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            margin: 20px 0;
-        }
-        .qr-placeholder {
-            width: 200px;
-            height: 200px;
-            background: #f3f4f6;
-            border: 2px dashed #d1d5db;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto;
-            color: #6b7280;
-        }
-        .stats-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
-        }
-        .stat-card {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .stat-card .number {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--primary);
-            margin-bottom: 5px;
-        }
-        .stat-card .label {
-            font-size: 0.8rem;
-            color: #6b7280;
-        }
-        .tab-container {
-            margin: 20px 0;
-        }
-        .tabs {
-            display: flex;
-            border-bottom: 2px solid #e5e7eb;
-            margin-bottom: 20px;
-        }
-        .tab {
-            padding: 10px 20px;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: all 0.3s;
-        }
-        .tab.active {
-            border-bottom-color: var(--primary);
-            color: var(--primary);
-            font-weight: 600;
-        }
-        .tab-content {
-            display: none;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        /* Loading Overlay Fix */
-        .loading-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; z-index: 999; justify-content: center; align-items: center;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #667eea; --secondary: #764ba2; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --dark: #1f2937; --light: #f8fafc; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); min-height: 100vh; padding: 20px; color: var(--dark); }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+        .header { background: linear-gradient(135deg, var(--dark) 0%, #374151 100%); color: white; padding: 40px 30px; text-align: center; }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 40px 30px; }
+        @media (max-width: 768px) { .main-content { grid-template-columns: 1fr; } }
+        .panel { background: var(--light); border-radius: 15px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .panel h2 { color: var(--dark); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-size: 1.5rem; }
+        .form-group { margin-bottom: 25px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark); }
+        input, textarea { width: 100%; padding: 15px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 16px; transition: all 0.3s; }
+        input:focus, textarea:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        .btn-group { display: flex; gap: 15px; margin: 25px 0; }
+        .btn { flex: 1; padding: 15px 25px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .status-container { margin-top: 25px; }
+        .status { padding: 20px; border-radius: 10px; margin-bottom: 15px; display: none; }
+        .status-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .status-error { background: #fee2e2; color: #7f1d1d; border: 1px solid #fca5a5; }
+        .status-loading { background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd; }
+        .status-warning { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+        .user-info { background: white; padding: 20px; border-radius: 10px; border: 2px solid #e5e7eb; margin-bottom: 20px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .info-item { display: flex; flex-direction: column; }
+        .info-label { font-size: 0.9rem; color: #6b7280; margin-bottom: 5px; }
+        .info-value { font-size: 1.1rem; font-weight: 600; color: var(--dark); word-break: break-all;}
+        .auth-form { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .tab-container { margin: 20px 0; }
+        .tabs { display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
+        .tab { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.3s; }
+        .tab.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; z-index: 999; justify-content: center; align-items: center; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        /* Supabase Status Indicator */
-        .supabase-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            background: var(--success);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-        .supabase-status.offline {
-            background: var(--danger);
-        }
-        
-        /* Logout button */
-        .logout-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: var(--danger);
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
+        .logout-btn { position: absolute; top: 20px; right: 20px; background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -523,32 +53,7 @@
     <div class="container">
         <div class="header">
             <h1><i class="fab fa-whatsapp"></i> WhatsApp Bulk Messenger Pro</h1>
-            <p>Enterprise-grade automation with 24/7 uptime guarantee</p>
-            <div class="uptime-indicator">
-                <i class="fas fa-circle"></i> 24/7 ONLINE
-            </div>
-            <div id="supabaseStatus" class="supabase-status">
-                <i class="fas fa-database"></i> SUPABASE CONNECTED
-            </div>
-        </div>
-      
-        <div class="stats-bar">
-            <div class="stat-item">
-                <div class="stat-number" id="totalUsers">0</div>
-                <div class="stat-label">Total Users</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" id="activeBots">0</div>
-                <div class="stat-label">Active Bots</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" id="serverCount">5</div>
-                <div class="stat-label">Bot Servers</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">500+</div>
-                <div class="stat-label">Capacity</div>
-            </div>
+            <p>User Authentication Demo</p>
         </div>
       
         <div class="main-content">
@@ -566,14 +71,11 @@
                             <label for="loginPassword">Password</label>
                             <input type="password" id="loginPassword" placeholder="Your password">
                         </div>
-                        <button class="btn btn-primary" onclick="loginWithValidation()">
+                        <button class="btn btn-primary" onclick="login()">
                             <i class="fas fa-sign-in-alt"></i> Login
                         </button>
                         <p style="text-align: center; margin-top: 15px;">
                             Don't have an account? <a href="javascript:void(0)" onclick="showRegister()" style="color: var(--primary);">Register here</a>
-                        </p>
-                        <p style="text-align: center; margin-top: 10px;">
-                            <a href="javascript:void(0)" onclick="showForgotPassword()" style="color: var(--primary); font-size: 0.9rem;">Forgot Password?</a>
                         </p>
                     </div>
                   
@@ -587,7 +89,7 @@
                             <label for="registerPassword">Password</label>
                             <input type="password" id="registerPassword" placeholder="Create a password (min 8 characters)">
                         </div>
-                        <button class="btn btn-primary" onclick="registerWithValidation()">
+                        <button class="btn btn-primary" onclick="register()">
                             <i class="fas fa-user-plus"></i> Register
                         </button>
                         <p style="text-align: center; margin-top: 15px;">
@@ -595,12 +97,13 @@
                         </p>
                     </div>
                 </div>
+                
                 <!-- DASHBOARD SECTION (SHOWN AFTER LOGIN) -->
                 <div id="dashboardSection" style="display:none">
                     <button class="logout-btn" onclick="logout()">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </button>
-                    <h2><i class="fas fa-rocket"></i> Bot Control Center</h2>
+                    <h2><i class="fas fa-rocket"></i> Demo Dashboard</h2>
                   
                     <div class="user-info">
                         <div class="info-grid">
@@ -618,86 +121,35 @@
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Secret Key</span>
-                                <span class="info-value">
-                                    <span id="userSecretKey">-</span>
-                                    <button class="btn btn-secondary" onclick="copySecretKey()" style="padding: 5px 10px; margin-left: 10px;">
-                                        <i class="fas fa-copy"></i> Copy
-                                    </button>
-                                </span>
+                                <span class="info-value" id="userSecretKey">-</span>
                             </div>
                         </div>
                     </div>
                     <div class="tab-container">
                         <div class="tabs">
                             <div class="tab active" onclick="switchTab('spreadsheet')">Spreadsheet</div>
-                            <div class="tab" onclick="switchTab('botControl')">Bot Control</div>
-                            <div class="tab" onclick="switchTab('activity')">Activity</div>
+                            <div class="tab" onclick="switchTab('botControl')">Bot Control (Coming Soon)</div>
                         </div>
                         <!-- SPREADSHEET TAB -->
                         <div id="spreadsheetTab" class="tab-content active">
+                            <div id="spreadsheetStatus" style="margin-bottom: 15px; font-weight: bold; word-break: break-all;"></div>
                             <div class="form-group">
                                 <label for="spreadsheetUrl"><i class="fas fa-table"></i> Your Google Sheet URL</label>
-                                <input type="url" id="spreadsheetUrl"
-                                       placeholder="https://docs.google.com/spreadsheets/d/your-sheet-id/edit"
-                                       required>
+                                <input type="url" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/d/your-sheet-id/edit" required>
                                 <small style="color: #6b7280; font-size: 0.9rem;">
-                                    📋 Create a Google Sheet with Column A for phone numbers and Column B for messages. Share with "Anyone can edit" and paste the URL here.
+                                    📋 Enter a valid Google Sheet URL and click save.
                                 </small>
                             </div>
                             <div class="btn-group">
-                                <button class="btn btn-primary" onclick="saveSpreadsheet()" id="saveSheetBtn">
+                                <button class="btn btn-primary" onclick="handleSaveSpreadsheet()" id="saveSheetBtn">
                                     <i class="fas fa-save"></i> SAVE SPREADSHEET
                                 </button>
                             </div>
                         </div>
-                        <!-- BOT CONTROL TAB -->
+                        <!-- BOT CONTROL TAB (PLACEHOLDER) -->
                         <div id="botControlTab" class="tab-content">
-                            <div class="bot-controls">
-                                <h3><i class="fas fa-robot"></i> Bot Management</h3>
-                                <div class="control-buttons">
-                                    <button class="btn btn-success" onclick="startBot()" id="startBtn">
-                                        <i class="fas fa-play"></i> START BOT
-                                    </button>
-                                    <button class="btn btn-danger" onclick="stopBot()" id="stopBtn" disabled>
-                                        <i class="fas fa-stop"></i> STOP BOT
-                                    </button>
-                                </div>
-                              
-                                <div class="progress-bar">
-                                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-                                </div>
-                              
-                                <div class="activity-log" id="botLog">
-                                    <div class="log-entry">
-                                        <span class="log-time">[00:00:00]</span>
-                                        <span class="log-info">Bot console ready...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- ACTIVITY TAB -->
-                        <div id="activityTab" class="tab-content">
-                            <div class="stats-cards">
-                                <div class="stat-card">
-                                    <div class="number" id="totalActivities">0</div>
-                                    <div class="label">Total Activities</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="number" id="filesUploaded">0</div>
-                                    <div class="label">Files Uploaded</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="number" id="botSessionsCount">0</div>
-                                    <div class="label">Bot Sessions</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="number" id="firstSeen">-</div>
-                                    <div class="label">First Seen</div>
-                                </div>
-                            </div>
-                            <div class="activity-section" id="activityHistory">
-                                <!-- Activity items will be populated here -->
-                            </div>
+                            <h3>Bot management will be here.</h3>
+                            <p>This section is currently under development.</p>
                         </div>
                     </div>
                     <div class="status-container">
@@ -705,823 +157,132 @@
                     </div>
                 </div>
             </div>
-            <!-- RIGHT PANEL - ACTIVITY & FEATURES -->
-            <div class="panel">
-                <h2><i class="fas fa-chart-bar"></i> Activity Monitor</h2>
-              
-                <div class="user-info">
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <span class="info-label">Bot Status</span>
-                            <span class="info-value" id="botStatusDisplay">-</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Assigned Server</span>
-                            <span class="info-value" id="assignedServer">-</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Started At</span>
-                            <span class="info-value" id="startedAt">-</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Last Updated</span>
-                            <span class="info-value" id="lastUpdated">-</span>
-                        </div>
-                    </div>
-                </div>
-                <h3 style="margin: 20px 0 10px 0;"><i class="fas fa-server"></i> Server Status</h3>
-                <div id="serverStatus" style="margin-bottom: 20px;">
-                    <!-- Server status will be populated by JavaScript -->
-                </div>
-                <!-- QR Code Section -->
-                <div class="qr-container" id="qrSection" style="display:none">
-                    <h3><i class="fas fa-qrcode"></i> WhatsApp QR Code</h3>
-                    <p>Scan this QR code with your phone to connect WhatsApp</p>
-                    <div class="qr-placeholder">
-                        <i class="fas fa-qrcode" style="font-size: 3rem;"></i>
-                    </div>
-                    <p style="margin-top: 10px; font-size: 0.9rem; color: #6b7280;">
-                        The bot will automatically start after successful QR scan
-                    </p>
-                </div>
-                <div class="features">
-                    <div class="feature">
-                        <i class="fas fa-shield-alt"></i>
-                        <h3>100% Secure</h3>
-                        <p>Individual sessions for each user</p>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-bolt"></i>
-                        <h3>High Speed</h3>
-                        <p>5 optimized bot servers</p>
-                        <div class="feature-badge">24/7 UPTIME</div>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-database"></i>
-                        <h3>Supabase Powered</h3>
-                        <p>Real-time data storage</p>
-                        <div class="feature-badge">CLOUD SYNC</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- VERIFICATION MODAL -->
-    <div class="modal" id="verificationModal">
-        <div class="modal-content">
-            <h2><i class="fas fa-envelope"></i> Verify Your Email</h2>
-            <div class="form-group">
-                <label for="verifyCode">Verification Code</label>
-                <input type="text" id="verifyCode" placeholder="Enter 6-digit code">
-                <small style="color: #6b7280;">Check your email for the verification code</small>
-            </div>
-            <div class="btn-group">
-                <button class="btn btn-primary" onclick="verifyEmail()">
-                    <i class="fas fa-check"></i> Verify
-                </button>
-                <button class="btn btn-secondary" onclick="hideVerificationModal()">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-    <!-- FORGOT PASSWORD MODAL -->
-    <div class="modal" id="forgotPasswordModal">
-        <div class="modal-content">
-            <h2><i class="fas fa-key"></i> Reset Password</h2>
-            <div class="form-group">
-                <label for="forgotEmail">Email Address</label>
-                <input type="email" id="forgotEmail" placeholder="your@email.com">
-            </div>
-            <div class="btn-group">
-                <button class="btn btn-primary" onclick="sendResetCode()">
-                    <i class="fas fa-paper-plane"></i> Send Reset Code
-                </button>
-                <button class="btn btn-secondary" onclick="hideForgotPasswordModal()">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-    <!-- RESET PASSWORD MODAL -->
-    <div class="modal" id="resetPasswordModal">
-        <div class="modal-content">
-            <h2><i class="fas fa-key"></i> Set New Password</h2>
-            <div class="form-group">
-                <label for="resetCode">Reset Code</label>
-                <input type="text" id="resetCode" placeholder="Enter reset code">
-            </div>
-            <div class="form-group">
-                <label for="newPassword">New Password</label>
-                <input type="password" id="newPassword" placeholder="Enter new password">
-            </div>
-            <div class="btn-group">
-                <button class="btn btn-primary" onclick="resetPassword()">
-                    <i class="fas fa-check"></i> Reset Password
-                </button>
-                <button class="btn btn-secondary" onclick="hideResetPasswordModal()">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-    <script>
-    // API Configuration - Uses current domain
-    const API_BASE = window.location.origin;
 
-    // User data
+            <!-- RIGHT PANEL (SIMPLIFIED) -->
+            <div class="panel">
+                <h2><i class="fas fa-info-circle"></i> Instructions</h2>
+                <p><strong>1. Register:</strong> Create an account using the form on the left.</p>
+                <p><strong>2. Login:</strong> Use your new credentials to log into the demo dashboard.</p>
+                <p><strong>3. Save URL:</strong> In the "Spreadsheet" tab, enter a Google Sheet URL and save it.</p>
+                <p><strong>4. Verify:</strong> Logout and log back in. Your saved URL should still be there, confirming the database connection is working!</p>
+            </div>
+        </div>
+    </div>
+    
+<script>
+    const API_BASE = window.location.origin;
     let userSecretKey = '';
     let userEmail = '';
-    let botStatusInterval = null;
-    let activityUpdateInterval = null;
-    let progressInterval = null;
 
-    // Authentication functions
-    async function registerWithValidation() {
-        const email = document.getElementById('registerEmail').value;
-        const password = document.getElementById('registerPassword').value;
-
-        if (!email || !password) {
-            showStatus('Please enter both email and password', 'error');
-            return;
+    // --- Core Functions ---
+    function showStatus(message, type) {
+        const statusDiv = document.getElementById('status');
+        if (!statusDiv) return;
+        statusDiv.textContent = message;
+        statusDiv.className = `status status-${type}`;
+        statusDiv.style.display = 'block';
+        if (type === 'success') {
+            setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
         }
-        if (!isValidEmail(email)) {
-            showStatus('Please enter a valid email address', 'error');
-            return;
-        }
-        if (password.length < 8) {
-            showStatus('Password must be at least 8 characters long', 'error');
-            return;
-        }
-       
-        document.getElementById('status').style.display = 'none';
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        await register();
     }
 
+    async function apiRequest(endpoint, options) {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        try {
+            const response = await fetch(API_BASE + endpoint, options);
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error || `Request failed with status ${response.status}`);
+            }
+            return result;
+        } catch (error) {
+            console.error(`API Error on ${endpoint}:`, error.message);
+            showStatus(error.message, 'error');
+            throw error;
+        } finally {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    }
+
+    // --- Authentication Logic ---
     async function register() {
         const email = document.getElementById('registerEmail').value;
         const password = document.getElementById('registerPassword').value;
-
-        showStatus('Creating your account...', 'loading');
-       
-        const registerBtn = document.querySelector('#registerForm button');
-        if (registerBtn) {
-            registerBtn.disabled = true;
-            registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> REGISTERING...';
-        }
-       
+        if (!email || !password) return showStatus('Please enter both email and password.', 'error');
+        if (password.length < 8) return showStatus('Password must be at least 8 characters long.', 'error');
         try {
-            const response = await fetch(API_BASE + '/register', {
+            const result = await apiRequest('/register', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({email, password})
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
             });
-          
-            const result = await response.json();
-          
-            if (response.ok) {
-                userSecretKey = result.secret_key;
-                userEmail = email;
-                showVerificationModal();
-                showStatus('Registration successful! Check your email for verification code.', 'success');
-            } else {
-                throw new Error(result.error || result.message || `Registration failed with status ${response.status}`);
-            }
-          
-        } catch (error) {
-            handleFetchError(error, 'registration');
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-            if (registerBtn) {
-                registerBtn.disabled = false;
-                registerBtn.innerHTML = '<i class="fas fa-user-plus"></i> REGISTER';
-            }
-        }
-    }
-
-    async function loginWithValidation() {
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
-
-        if (!email || !password) {
-            showStatus('Please enter both email and password', 'error');
-            return;
-        }
-        if (!isValidEmail(email)) {
-            showStatus('Please enter a valid email address', 'error');
-            return;
-        }
-       
-        document.getElementById('status').style.display = 'none';
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        await login();
+            showStatus(result.message, 'success');
+            showLogin();
+        } catch (error) {/* Handled by apiRequest */}
     }
 
     async function login() {
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
-
-        showStatus('Logging in...', 'loading');
-       
-        const loginBtn = document.querySelector('#loginForm button');
-        if (loginBtn) {
-            loginBtn.disabled = true;
-            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> LOGGING IN...';
-        }
-       
+        if (!email || !password) return showStatus('Please enter both email and password.', 'error');
         try {
-            const response = await fetch(API_BASE + '/login', {
+            const result = await apiRequest('/login', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({email, password})
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
             });
-          
-            const result = await response.json();
-          
-            if (response.ok) {
-                userSecretKey = result.secret_key;
-                userEmail = email;
-                showDashboard();
-                showStatus('Login successful!', 'success');
-                loadUserProfile();
-                loadUserActivity();
-                startStatusMonitoring();
-                saveUserSession();
-            } else {
-                throw new Error(result.error || result.message || `Login failed with status ${response.status}`);
-            }
-          
-        } catch (error) {
-            handleFetchError(error, 'login');
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-            if (loginBtn) {
-                loginBtn.disabled = false;
-                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> LOGIN';
-            }
-        }
+            userEmail = email;
+            userSecretKey = result.secret_key;
+            showStatus('Login successful!', 'success');
+            showDashboard(result);
+        } catch (error) {/* Handled by apiRequest */}
+    }
+    
+    function logout() {
+        userSecretKey = ''; 
+        userEmail = '';
+        document.getElementById('dashboardSection').style.display = 'none';
+        document.getElementById('authSection').style.display = 'block';
+        showLogin();
+        showStatus('Logged out successfully', 'success');
     }
 
-    async function verifyEmail() {
-        const code = document.getElementById('verifyCode').value;
-
-        if (!code) {
-            showStatus('Please enter verification code', 'error');
-            return;
-        }
-       
-        showStatus('Verifying your email...', 'loading');
-        document.getElementById('loadingOverlay').style.display = 'flex';
-       
-        const verifyBtn = document.querySelector('#verificationModal .btn-primary');
-        if (verifyBtn) {
-            verifyBtn.disabled = true;
-            verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> VERIFYING...';
-        }
-       
-        try {
-            const response = await fetch(API_BASE + '/verify', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({email: userEmail, code})
-            });
-          
-            const result = await response.json();
-          
-            if (response.ok) {
-                hideVerificationModal();
-                showDashboard();
-                showStatus('Email verified successfully!', 'success');
-                loadUserProfile();
-            } else {
-                throw new Error(result.error || result.message || 'Verification failed');
-            }
-          
-        } catch (error) {
-            handleFetchError(error, 'verification');
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-            if (verifyBtn) {
-                verifyBtn.disabled = false;
-                verifyBtn.innerHTML = '<i class="fas fa-check"></i> VERIFY';
-            }
-        }
-    }
-
-    async function saveSpreadsheet() {
+    // --- Dashboard Logic ---
+    async function handleSaveSpreadsheet() {
         const spreadsheetUrl = document.getElementById('spreadsheetUrl').value;
-
         if (!spreadsheetUrl) {
-            showStatus('Please enter your Google Sheet URL', 'error');
-            return;
+            return showStatus("Spreadsheet URL cannot be empty.", "warning");
         }
-        if (!userSecretKey) {
-            showStatus('Please login first', 'error');
-            return;
+        if (!spreadsheetUrl.startsWith('https://docs.google.com/spreadsheets/')) {
+            return showStatus("Please enter a valid Google Sheets URL.", "warning");
         }
-       
-        const saveSheetBtn = document.getElementById('saveSheetBtn');
-        saveSheetBtn.disabled = true;
-        saveSheetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SAVING...';
-        document.getElementById('loadingOverlay').style.display = 'flex';
-      
         try {
-            const response = await fetch(API_BASE + '/save_spreadsheet', {
+            const result = await apiRequest('/save_spreadsheet', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    secret_key: userSecretKey,
-                    spreadsheet_url: spreadsheetUrl
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ secret_key: userSecretKey, spreadsheet_url: spreadsheetUrl })
             });
-          
-            const result = await response.json();
-          
-            if (response.ok) {
-                showStatus('Spreadsheet URL saved successfully!', 'success');
-                addBotLog('Spreadsheet saved successfully', 'success');
-            } else {
-                throw new Error(result.error || result.message || 'Failed to save spreadsheet');
-            }
-          
-        } catch (error) {
-            handleFetchError(error, 'save spreadsheet');
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-            saveSheetBtn.disabled = false;
-            saveSheetBtn.innerHTML = '<i class="fas fa-save"></i> SAVE SPREADSHEET';
+            showStatus(result.message, 'success');
+            updateSpreadsheetStatus(spreadsheetUrl); // Update the display instantly
+        } catch (error) {/* Handled by apiRequest */}
+    }
+
+    function updateSpreadsheetStatus(url) {
+        const statusDiv = document.getElementById('spreadsheetStatus');
+        const urlInput = document.getElementById('spreadsheetUrl');
+        if (url) {
+            statusDiv.innerHTML = `✅ Current URL Saved: <span style="color: green;">${url}</span>`;
+            urlInput.value = url;
+        } else {
+            statusDiv.innerHTML = `🟡 No Spreadsheet URL has been saved yet.`;
+            urlInput.value = '';
         }
     }
 
-    async function startBot() {
-        if (!userSecretKey) {
-            showStatus('Please login first', 'error');
-            return;
-        }
-       
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-      
-        startBtn.disabled = true;
-        startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> STARTING...';
-        showStatus('Starting your WhatsApp bot...', 'loading');
-        document.getElementById('loadingOverlay').style.display = 'flex';
-      
-        document.getElementById('qrSection').style.display = 'block';
-      
-        addBotLog('🚀 Starting WhatsApp Bot...', 'info');
-        addBotLog('📱 Please scan the QR code when it appears', 'warning');
-        addBotLog('⏳ Bot will start automatically after QR scan', 'info');
-       
-        try {
-            const response = await fetch(API_BASE + '/start', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    secret_key: userSecretKey
-                })
-            });
-          
-            const result = await response.json();
-          
-            if (response.ok) {
-                showStatus('Bot started successfully! Running 24/7...', 'success');
-                stopBtn.disabled = false;
-              
-                addBotLog('✅ Bot started successfully!', 'success');
-                addBotLog('🔄 Bot is now running on: ' + result.assigned_server, 'info');
-                addBotLog('📊 Processing your spreadsheet data...', 'info');
-              
-                startProgressMonitoring();
-                updateBotStatus();
-            } else {
-                throw new Error(result.error || result.message || 'Failed to start bot');
-            }
-          
-        } catch (error) {
-            handleFetchError(error, 'start bot');
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-            startBtn.disabled = false;
-            startBtn.innerHTML = '<i class="fas fa-play"></i> START BOT';
-        }
-    }
-
-    async function stopBot() {
-        if (!userSecretKey) {
-            showStatus('Please login first', 'error');
-            return;
-        }
-       
-        const stopBtn = document.getElementById('stopBtn');
-        stopBtn.disabled = true;
-        stopBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> STOPPING...';
-        showStatus('Stopping your bot...', 'loading');
-        document.getElementById('loadingOverlay').style.display = 'flex';
-      
-        addBotLog('🛑 Stopping bot...', 'warning');
-       
-        try {
-            const response = await fetch(API_BASE + '/stop', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    secret_key: userSecretKey
-                })
-            });
-          
-            const result = await response.json();
-          
-            if (response.ok) {
-                showStatus('Bot stopped successfully!', 'success');
-                addBotLog('✅ Bot stopped successfully!', 'success');
-              
-                document.getElementById('qrSection').style.display = 'none';
-                document.getElementById('progressFill').style.width = '0%';
-              
-                if (progressInterval) {
-                    clearInterval(progressInterval);
-                    progressInterval = null;
-                }
-              
-                updateBotStatus();
-            } else {
-                throw new Error(result.error || result.message || 'Failed to stop bot');
-            }
-          
-        } catch (error) {
-            handleFetchError(error, 'stop bot');
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-            stopBtn.disabled = false;
-            stopBtn.innerHTML = '<i class="fas fa-stop"></i> STOP BOT';
-        }
-    }
-
-    async function startProgressMonitoring() {
-        if (progressInterval) {
-            clearInterval(progressInterval);
-        }
-        
-        progressInterval = setInterval(async () => {
-            if (!userSecretKey) return;
-            
-            try {
-                const response = await fetch(API_BASE + '/progress', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({secret_key: userSecretKey})
-                });
-              
-                const result = await response.json();
-              
-                if (response.ok && result.status === 'success' && result.progress) {
-                    const progress = result.progress;
-                    const progressBar = document.getElementById('progressFill');
-                    
-                    // Update progress bar based on actual progress
-                    if (progress.processed && progress.total_contacts) {
-                        const percentage = (progress.processed / progress.total_contacts) * 100;
-                        progressBar.style.width = percentage + '%';
-                    }
-                    
-                    // Update bot log with real progress
-                    if (progress.current_contact) {
-                        addBotLog(`📞 Processing: ${progress.current_contact}`, 'info');
-                    }
-                    
-                    if (progress.status === 'completed') {
-                        addBotLog('🎉 Bot completed processing all contacts!', 'success');
-                        if (progressInterval) {
-                            clearInterval(progressInterval);
-                            progressInterval = null;
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Progress monitoring error:', error);
-            }
-        }, 5000);
-    }
-
-    function addBotLog(message, type = 'info') {
-        const logContainer = document.getElementById('botLog');
-        const timestamp = new Date().toLocaleTimeString();
-        const logEntry = document.createElement('div');
-        logEntry.className = 'log-entry';
-        logEntry.innerHTML = `
-            <span class="log-time">[${timestamp}]</span>
-            <span class="log-${type}">${message}</span>
-        `;
-        logContainer.appendChild(logEntry);
-        logContainer.scrollTop = logContainer.scrollHeight;
-    }
-
-    async function loadUserProfile() {
-        if (!userSecretKey) return;
-      
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        try {
-            const response = await fetch(API_BASE + '/user/profile', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({secret_key: userSecretKey})
-            });
-          
-            const result = await response.json();
-          
-            if (response.ok) {
-                document.getElementById('userEmail').textContent = result.email;
-                document.getElementById('userCredits').textContent = result.credits;
-                document.getElementById('userStatus').textContent = result.verified ? 'Verified ✅' : 'Not Verified ❌';
-                document.getElementById('userSecretKey').textContent = userSecretKey;
-              
-                if (result.spreadsheet_url) {
-                    document.getElementById('spreadsheetUrl').value = result.spreadsheet_url;
-                }
-                
-                // Update activity stats
-                document.getElementById('totalActivities').textContent = result.total_activities || 0;
-                document.getElementById('filesUploaded').textContent = result.files_uploaded || 0;
-                document.getElementById('botSessionsCount').textContent = result.bot_sessions || 0;
-                document.getElementById('firstSeen').textContent = result.first_seen ? new Date(result.first_seen).toLocaleDateString() : '-';
-            }
-        } catch (error) {
-            handleFetchError(error, 'load profile');
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-    }
-
-    async function loadUserActivity() {
-        if (!userSecretKey) return;
-      
-        try {
-            // Since we don't have a direct activity endpoint, we'll use the profile data
-            const response = await fetch(API_BASE + '/user/profile', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({secret_key: userSecretKey})
-            });
-          
-            const result = await response.json();
-          
-            if (response.ok) {
-                updateActivityHistory(result.activity_counts || {});
-            }
-        } catch (error) {
-            handleFetchError(error, 'load activity');
-        }
-    }
-
-    function updateActivityHistory(activityCounts) {
-        const activityContainer = document.getElementById('activityHistory');
-        activityContainer.innerHTML = '';
-      
-        // Create activity items from counts
-        Object.entries(activityCounts).forEach(([activityType, count]) => {
-            const activityItem = document.createElement('div');
-            activityItem.className = 'activity-item';
-          
-            const type = activityType.replace(/_/g, ' ').toUpperCase();
-            const time = new Date().toLocaleString(); // Since we don't have timestamps, use current time
-            
-            activityItem.innerHTML = `
-                <div class="activity-type">${type}</div>
-                <div class="activity-time">Count: ${count} - Last: ${time}</div>
-            `;
-          
-            activityContainer.appendChild(activityItem);
-        });
-        
-        // If no activities, show message
-        if (Object.keys(activityCounts).length === 0) {
-            activityContainer.innerHTML = '<div class="activity-item">No activities recorded yet</div>';
-        }
-    }
-
-    async function updateBotStatus() {
-        if (!userSecretKey) return;
-      
-        try {
-            const response = await fetch(API_BASE + '/status', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({secret_key: userSecretKey})
-            });
-          
-            const result = await response.json();
-          
-            if (response.ok && result.status !== 'no_active_session') {
-                document.getElementById('botStatusDisplay').textContent = result.status;
-                document.getElementById('assignedServer').textContent = result.assigned_server;
-                document.getElementById('startedAt').textContent = new Date(result.started_at).toLocaleString();
-                document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
-              
-                const stopBtn = document.getElementById('stopBtn');
-                if (result.status === 'running' || result.status === 'starting') {
-                    stopBtn.disabled = false;
-                    document.getElementById('botStatusDisplay').innerHTML = '<span style="color: var(--success);">🟢 RUNNING (24/7)</span>';
-                    document.getElementById('qrSection').style.display = 'block';
-                } else {
-                    stopBtn.disabled = true;
-                    document.getElementById('botStatusDisplay').innerHTML = '<span style="color: var(--danger);">🔴 STOPPED</span>';
-                    document.getElementById('qrSection').style.display = 'none';
-                }
-            } else {
-                document.getElementById('botStatusDisplay').innerHTML = '<span style="color: #6b7280;">⚪ NO ACTIVE SESSION</span>';
-                document.getElementById('assignedServer').textContent = '-';
-                document.getElementById('startedAt').textContent = '-';
-                document.getElementById('stopBtn').disabled = true;
-                document.getElementById('qrSection').style.display = 'none';
-            }
-        } catch (error) {
-            handleFetchError(error, 'update status');
-        }
-    }
-
-    function startStatusMonitoring() {
-        if (botStatusInterval) clearInterval(botStatusInterval);
-        botStatusInterval = setInterval(updateBotStatus, 10000);
-      
-        if (activityUpdateInterval) clearInterval(activityUpdateInterval);
-        activityUpdateInterval = setInterval(loadUserActivity, 30000);
-      
-        setInterval(checkServerStatus, 60000);
-        
-        // Initial updates
-        updateBotStatus();
-        loadUserActivity();
-    }
-
-    async function checkServerStatus() {
-        try {
-            const response = await fetch(API_BASE + '/stats');
-            const result = await response.json();
-          
-            const serverStatusDiv = document.getElementById('serverStatus');
-            if (serverStatusDiv && result.server_stats) {
-                serverStatusDiv.innerHTML = '';
-              
-                let onlineServers = 0;
-              
-                for (const [server, status] of Object.entries(result.server_stats.server_status || {})) {
-                    const serverDiv = document.createElement('div');
-                    serverDiv.className = 'server-status';
-                  
-                    const statusDot = document.createElement('span');
-                    statusDot.className = status ? 'status-dot status-online' : 'status-dot status-offline';
-                    serverDiv.appendChild(statusDot);
-                  
-                    const serverName = server.split('//')[1].split('.')[0];
-                    serverDiv.innerHTML += `${serverName} - <span style="color: ${status ? 'var(--success)' : 'var(--danger)'};">${status ? 'ONLINE' : 'OFFLINE'}</span>`;
-                  
-                    serverStatusDiv.appendChild(serverDiv);
-                    if (status) onlineServers++;
-                }
-              
-                document.getElementById('serverCount').textContent = onlineServers;
-            }
-          
-        } catch (error) {
-            handleFetchError(error, 'server status');
-            document.getElementById('serverCount').textContent = '0';
-        }
-    }
-
-    async function updateStats() {
-        try {
-            const response = await fetch(API_BASE + '/stats');
-            if (response.ok) {
-                const result = await response.json();
-                document.getElementById('totalUsers').textContent = result.total_users || '0';
-                document.getElementById('activeBots').textContent = result.active_bots || '0';
-                
-                // Update Supabase status
-                const supabaseStatus = document.getElementById('supabaseStatus');
-                if (result.supabase_connected) {
-                    supabaseStatus.innerHTML = '<i class="fas fa-database"></i> SUPABASE CONNECTED';
-                    supabaseStatus.className = 'supabase-status';
-                } else {
-                    supabaseStatus.innerHTML = '<i class="fas fa-database"></i> SUPABASE OFFLINE';
-                    supabaseStatus.className = 'supabase-status offline';
-                }
-            }
-        } catch (error) {
-            handleFetchError(error, 'stats');
-            document.getElementById('totalUsers').textContent = '0';
-            document.getElementById('activeBots').textContent = '0';
-        }
-    }
-
-    // Password reset functions
-    function showForgotPassword() {
-        document.getElementById('forgotPasswordModal').style.display = 'flex';
-    }
-
-    function hideForgotPasswordModal() {
-        document.getElementById('forgotPasswordModal').style.display = 'none';
-    }
-
-    function showResetPasswordModal() {
-        document.getElementById('resetPasswordModal').style.display = 'flex';
-    }
-
-    function hideResetPasswordModal() {
-        document.getElementById('resetPasswordModal').style.display = 'none';
-    }
-
-    async function sendResetCode() {
-        const email = document.getElementById('forgotEmail').value;
-
-        if (!email) {
-            showStatus('Please enter your email address', 'error');
-            return;
-        }
-
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        showStatus('Sending reset code...', 'loading');
-
-        try {
-            const response = await fetch(API_BASE + '/forgot_password', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({email})
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                hideForgotPasswordModal();
-                showResetPasswordModal();
-                showStatus('Reset code sent to your email!', 'success');
-            } else {
-                throw new Error(result.error || 'Failed to send reset code');
-            }
-        } catch (error) {
-            handleFetchError(error, 'send reset code');
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-    }
-
-    async function resetPassword() {
-        const email = document.getElementById('forgotEmail').value;
-        const code = document.getElementById('resetCode').value;
-        const newPassword = document.getElementById('newPassword').value;
-
-        if (!email || !code || !newPassword) {
-            showStatus('Please fill all fields', 'error');
-            return;
-        }
-
-        if (newPassword.length < 8) {
-            showStatus('Password must be at least 8 characters long', 'error');
-            return;
-        }
-
-        document.getElementById('loadingOverlay').style.display = 'flex';
-        showStatus('Resetting password...', 'loading');
-
-        try {
-            const response = await fetch(API_BASE + '/reset_password', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    email,
-                    code,
-                    new_password: newPassword
-                })
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                hideResetPasswordModal();
-                showLogin();
-                showStatus('Password reset successfully! Please login with your new password.', 'success');
-            } else {
-                throw new Error(result.error || 'Failed to reset password');
-            }
-        } catch (error) {
-            handleFetchError(error, 'reset password');
-        } finally {
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-    }
-
-    // UI Management functions
-    function showDashboard() {
-        document.getElementById('authSection').style.display = 'none';
-        document.getElementById('dashboardSection').style.display = 'block';
-    }
-
+    // --- UI Management ---
     function showLogin() {
         document.getElementById('registerForm').style.display = 'none';
         document.getElementById('loginForm').style.display = 'block';
-        hideForgotPasswordModal();
-        hideResetPasswordModal();
     }
 
     function showRegister() {
@@ -1529,247 +290,31 @@
         document.getElementById('registerForm').style.display = 'block';
     }
 
-    function showVerificationModal() {
-        document.getElementById('verificationModal').style.display = 'flex';
+    function showDashboard(userData) {
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('dashboardSection').style.display = 'block';
+        document.getElementById('userEmail').textContent = userEmail;
+        document.getElementById('userCredits').textContent = userData.credits;
+        document.getElementById('userStatus').textContent = 'Verified ✅';
+        document.getElementById('userSecretKey').textContent = userData.secret_key;
+        updateSpreadsheetStatus(userData.spreadsheet_url);
     }
-
-    function hideVerificationModal() {
-        document.getElementById('verificationModal').style.display = 'none';
-    }
-
-    function showStatus(message, type) {
-        const statusDiv = document.getElementById('status');
-        statusDiv.textContent = message;
-        statusDiv.className = `status status-${type}`;
-        statusDiv.style.display = 'block';
-      
-        if (type === 'success') {
-            setTimeout(() => {
-                statusDiv.style.display = 'none';
-            }, 5000);
-        }
-    }
-
-    function copySecretKey() {
-        if (!userSecretKey) {
-            showStatus('No secret key available', 'error');
-            return;
-        }
-      
-        navigator.clipboard.writeText(userSecretKey).then(() => {
-            showStatus('Secret key copied to clipboard!', 'success');
-        }).catch(() => {
-            showStatus('Failed to copy secret key', 'error');
-        });
-    }
-
+    
     function switchTab(tabName) {
-        document.querySelectorAll('.tab-content').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-      
-        const targetTab = document.getElementById(tabName + 'Tab');
-        if (targetTab) {
-            targetTab.classList.add('active');
-        }
-      
-        if (event && event.target) {
-            event.target.classList.add('active');
-        }
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        
+        const content = document.getElementById(tabName + 'Tab');
+        if (content) content.classList.add('active');
+
+        const tab = Array.from(document.querySelectorAll('.tab')).find(el => el.textContent.toLowerCase().includes(tabName));
+        if (tab) tab.classList.add('active');
     }
 
-    // Utility functions
-    function setupFormHandlers() {
-        console.log('Setting up form handlers...');
-       
-        // Login form handler
-        const loginForm = document.getElementById('loginForm');
-        if (loginForm) {
-            loginForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                loginWithValidation();
-            });
-        }
-       
-        // Register form handler
-        const registerForm = document.getElementById('registerForm');
-        if (registerForm) {
-            registerForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                registerWithValidation();
-            });
-        }
-
-        // Enter key handlers
-        document.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                if (e.target.closest('#loginForm')) {
-                    e.preventDefault();
-                    loginWithValidation();
-                }
-                if (e.target.closest('#registerForm')) {
-                    e.preventDefault();
-                    registerWithValidation();
-                }
-                if (e.target.closest('#verificationModal')) {
-                    e.preventDefault();
-                    verifyEmail();
-                }
-            }
-        });
-
-        // Spreadsheet enter key handler
-        const spreadsheetInput = document.getElementById('spreadsheetUrl');
-        if (spreadsheetInput) {
-            spreadsheetInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    saveSpreadsheet();
-                }
-            });
-        }
-    }
-
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    function saveUserSession() {
-        if (userSecretKey && userEmail) {
-            localStorage.setItem('userSecretKey', userSecretKey);
-            localStorage.setItem('userEmail', userEmail);
-        }
-    }
-
-    function clearUserSession() {
-        localStorage.removeItem('userSecretKey');
-        localStorage.removeItem('userEmail');
-        userSecretKey = '';
-        userEmail = '';
-    }
-
-    function logout() {
-        clearUserSession();
-        document.getElementById('dashboardSection').style.display = 'none';
-        document.getElementById('authSection').style.display = 'block';
-        showLogin();
-        showStatus('Logged out successfully', 'success');
-      
-        if (botStatusInterval) {
-            clearInterval(botStatusInterval);
-            botStatusInterval = null;
-        }
-        if (activityUpdateInterval) {
-            clearInterval(activityUpdateInterval);
-            activityUpdateInterval = null;
-        }
-        if (progressInterval) {
-            clearInterval(progressInterval);
-            progressInterval = null;
-        }
-    }
-
-    function handleFetchError(error, operation) {
-        console.error(`Error during ${operation}:`, error);
-        let msg = `Error during ${operation}: `;
-       
-        if (error.message.includes('Failed to fetch')) {
-            msg += 'Cannot connect to server. Please check your internet connection and ensure the backend is running.';
-        } else if (error.message.includes('401')) {
-            msg += 'Invalid email or password. Please check your credentials.';
-        } else if (error.message.includes('Unexpected token')) {
-            msg += 'Server response error. Please try again later.';
-        } else {
-            msg += error.message;
-        }
-       
-        showStatus(msg, 'error');
-        if (operation.includes('bot')) {
-            addBotLog(`❌ ${operation} failed: ${error.message}`, 'error');
-        }
-    }
-
-    function checkExistingSession() {
-        const savedSecretKey = localStorage.getItem('userSecretKey');
-        const savedEmail = localStorage.getItem('userEmail');
-      
-        if (savedSecretKey && savedEmail) {
-            userSecretKey = savedSecretKey;
-            userEmail = savedEmail;
-            showDashboard();
-            loadUserProfile();
-            loadUserActivity();
-            startStatusMonitoring();
-        }
-    }
-
-    async function checkBackendHealth() {
-        try {
-            const response = await fetch(API_BASE + '/health');
-            if (response.ok) {
-                const result = await response.json();
-                console.log('✅ Backend is reachable');
-                
-                // Update Supabase status from health check
-                const supabaseStatus = document.getElementById('supabaseStatus');
-                if (result.supabase_connected) {
-                    supabaseStatus.innerHTML = '<i class="fas fa-database"></i> SUPABASE CONNECTED';
-                    supabaseStatus.className = 'supabase-status';
-                } else {
-                    supabaseStatus.innerHTML = '<i class="fas fa-database"></i> SUPABASE OFFLINE';
-                    supabaseStatus.className = 'supabase-status offline';
-                }
-                
-                return true;
-            }
-        } catch (error) {
-            console.error('❌ Backend is not reachable:', error);
-            showStatus('Backend server is not available. Please try again later.', 'error');
-            return false;
-        }
-    }
-
-    // Initialize application
+    // --- Page Initialization ---
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('🚀 WhatsApp Bulk Messenger Pro Frontend Initialized');
-        console.log('API Base URL:', API_BASE);
-      
-        setupFormHandlers();
-       
-        // Tab switching
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', function() {
-                const tabName = this.textContent.toLowerCase().replace(' ', '');
-                switchTab(tabName);
-            });
-        });
-      
-        // Button event listeners
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const saveSheetBtn = document.getElementById('saveSheetBtn');
-      
-        if (startBtn) startBtn.addEventListener('click', startBot);
-        if (stopBtn) stopBtn.addEventListener('click', stopBot);
-        if (saveSheetBtn) saveSheetBtn.addEventListener('click', saveSpreadsheet);
-      
-        // Check backend health
-        checkBackendHealth();
-        updateStats();
-        checkServerStatus();
-      
-        // Set up intervals for updates
-        setInterval(updateStats, 30000);
-        setInterval(checkServerStatus, 60000);
-      
-        // Check for existing session
-        checkExistingSession();
-       
-        console.log('Form handlers setup complete');
+        console.log("✅ Demo Dashboard Initialized.");
     });
-    </script>
+</script>
 </body>
 </html>
