@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 import threading
@@ -19,7 +19,7 @@ from sqlalchemy.exc import IntegrityError
 from config import Config
 from supabase import create_client, Client
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', template_folder='templates')
 app.config.from_object(Config)
 db = SQLAlchemy(app)
 
@@ -31,10 +31,12 @@ except Exception as e:
     print(f"❌ Supabase initialization error: {e}")
     supabase = None
 
-# CORS configuration
+# CORS configuration - UPDATE WITH YOUR ACTUAL DOMAINS
 CORS(app, origins=[
     'https://whatsapp-bot-simple.onrender.com',
     'http://localhost:3000',
+    'https://your-frontend-domain.onrender.com',  # ADD YOUR ACTUAL FRONTEND DOMAIN
+    'http://localhost:5000',
     '*'
 ])
 
@@ -62,9 +64,24 @@ init_db()
 # Store active user sessions
 user_sessions = {}
 
-BOT_SERVERS = Config.BOT_SERVERS
+BOT_SERVERS = [
+    'https://bot-1-ztr9.onrender.com',
+    'https://bot2-jrbf.onrender.com', 
+    'https://bot3-3rth.onrender.com',
+    'https://bot4-370m.onrender.com',
+    'https://bot5-q2ie.onrender.com'
+]
 
-# Supabase data storage functions
+# Serve static files
+@app.route('/')
+def serve_index():
+    return send_from_directory('static', 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory('static', path)
+
+# Supabase data storage functions (keep all your existing functions)
 def save_user_activity_to_supabase(email, activity_type, details=None):
     """Save user activity to Supabase"""
     if not supabase:
@@ -217,18 +234,6 @@ def update_user_activity(email, activity_type, details=None):
     
     return success
 
-# Compatibility functions
-def load_json_data():
-    """Compatibility function - now uses Supabase"""
-    return {
-        "users": {},
-        "system_stats": get_system_stats_from_supabase()
-    }
-
-def save_json_data(data):
-    """Compatibility function - data is now saved directly to Supabase"""
-    return True
-
 # Keep-alive mechanism
 def keep_alive_mechanism():
     """Prevent Render from shutting down by periodic activity"""
@@ -252,11 +257,7 @@ EMAIL_CONFIG = {
     'password': Config.EMAIL_PASSWORD
 }
 
-@app.route('/')
-def home():
-    return "🚀 WhatsApp Bot API - Multi-User System with Supabase"
-
-@app.route('/health')
+@app.route('/api/health')
 def health():
     supabase_status = supabase is not None
     return jsonify({
@@ -265,11 +266,11 @@ def health():
         "supabase_connected": supabase_status
     })
 
-@app.route('/ping')
+@app.route('/api/ping')
 def ping():
     return "OK"
 
-@app.route('/stats')
+@app.route('/api/stats')
 def get_stats():
     """Get system statistics from Supabase"""
     system_stats = get_system_stats_from_supabase()
@@ -281,7 +282,7 @@ def get_stats():
         "supabase_connected": supabase is not None
     })
 
-@app.route('/test_email')
+@app.route('/api/test_email')
 def test_email():
     """Test email sending"""
     send_verification_email('test@example.com', '123456')
@@ -295,7 +296,7 @@ def check_bot_server_status(server_url):
     except:
         return False
 
-@app.route('/server_status')
+@app.route('/api/server_status')
 def server_status():
     """Check status of all bot servers"""
     server_status = {}
@@ -309,7 +310,7 @@ def server_status():
     })
 
 # USER REGISTRATION AND AUTHENTICATION
-@app.route('/register', methods=['POST'])
+@app.route('/api/register', methods=['POST'])
 def register():
     try:
         data = request.get_json()
@@ -364,7 +365,7 @@ def register():
         print(f"Register error: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/verify', methods=['POST'])
+@app.route('/api/verify', methods=['POST'])
 def verify_email():
     try:
         data = request.get_json()
@@ -392,7 +393,7 @@ def verify_email():
         print(f"Verify error: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/login', methods=['POST'])
+@app.route('/api/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
@@ -430,7 +431,7 @@ def login():
         print(f"Login error: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/save_spreadsheet', methods=['POST'])
+@app.route('/api/save_spreadsheet', methods=['POST'])
 def save_spreadsheet():
     try:
         data = request.get_json()
@@ -465,7 +466,7 @@ def save_spreadsheet():
         return jsonify({"error": str(e)}), 500
 
 # BOT MANAGEMENT ENDPOINTS
-@app.route('/start', methods=['POST'])
+@app.route('/api/start', methods=['POST'])
 def start_bot():
     try:
         data = request.get_json()
@@ -542,7 +543,7 @@ def start_bot():
         print(f"Start bot error: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/stop', methods=['POST'])
+@app.route('/api/stop', methods=['POST'])
 def stop_bot():
     try:
         data = request.get_json()
@@ -589,7 +590,7 @@ def stop_bot():
         print(f"Stop bot error: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/status', methods=['POST'])
+@app.route('/api/status', methods=['POST'])
 def get_status():
     try:
         data = request.get_json()
@@ -620,7 +621,7 @@ def get_status():
         print(f"Status error: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/user/profile', methods=['POST'])
+@app.route('/api/user/profile', methods=['POST'])
 def get_user_profile():
     try:
         data = request.get_json()
@@ -652,7 +653,7 @@ def get_user_profile():
         print(f"Profile error: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/user/activity', methods=['POST'])
+@app.route('/api/user/activity', methods=['POST'])
 def get_user_activity():
     try:
         data = request.get_json()
@@ -785,7 +786,7 @@ def start_user_bot(user_id, spreadsheet_url, assigned_server, email):
         })
 
 def generate_user_bot_script(user_id, spreadsheet_url, working_dir, email):
-    """Generate personalized bot script with DYNAMIC SPREADSHEET - FULL CODE"""
+    """Generate personalized bot script with DYNAMIC SPREADSHEET"""
     # Use user's provided spreadsheet URL - THIS IS THE KEY!
     user_sheet_url = spreadsheet_url
     unique_port = 9200 + (hash(user_id) % 100)
