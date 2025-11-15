@@ -9,7 +9,7 @@ import secrets
 import hashlib
 import logging
 import requests
-from config import Config
+from config import Config # Make sure you have a config.py file
 
 # --- Basic Logging Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -27,7 +27,7 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"]
 )
 
-# --- Supabase Client Utility (Now includes UPDATE) ---
+# --- Supabase Client Utility (with INSERT, SELECT, UPDATE) ---
 class SupabaseClient:
     def __init__(self, url, key):
         self.url = url
@@ -39,10 +39,9 @@ class SupabaseClient:
         }
 
     def insert(self, table, data):
+        """Inserts a single row of data."""
         try:
-            response = requests.post(
-                f"{self.url}/rest/v1/{table}", headers=self.headers, json=data, timeout=10
-            )
+            response = requests.post(f"{self.url}/rest/v1/{table}", headers=self.headers, json=data, timeout=10)
             response.raise_for_status()
             return response.json(), None
         except requests.exceptions.HTTPError as e:
@@ -53,6 +52,7 @@ class SupabaseClient:
             return None, str(e)
 
     def select(self, table, filters=None, single=False):
+        """Selects data from a table."""
         try:
             url = f"{self.url}/rest/v1/{table}"
             if filters:
@@ -67,7 +67,8 @@ class SupabaseClient:
             response.raise_for_status()
             return response.json(), None
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404 or e.response.status_code == 406: # 406 is for no result on single=True
+            # Handle cases where no record is found without logging an error
+            if e.response.status_code == 404 or e.response.status_code == 406: 
                 return None, None
             logger.error(f"Supabase select HTTP error: {e.response.text}")
             return None, e.response.json().get('message', 'Select failed')
@@ -92,29 +93,42 @@ class SupabaseClient:
             return None, str(e)
 
 
+# --- Initialize Supabase Client ---
 supabase = SupabaseClient(Config.SUPABASE_URL, Config.SUPABASE_KEY)
-logger.info("✅ Supabase client initialized with update capabilities.")
+logger.info("✅ Supabase client initialized.")
 
+# --- Utility Functions ---
 def generate_secure_token(length=16):
     return f"sk_{secrets.token_hex(length)}"
 
+# --- Routes ---
 @app.route('/')
 def serve_frontend():
     return send_from_directory('.', 'index.html')
+    
+@app.route('/<path:path>')
+def serve_static(path):
+    try:
+        return send_from_directory('.', path)
+    except FileNotFoundError:
+        return jsonify({"error": "File not found"}), 404
 
 @app.route('/health')
 def health():
     return jsonify({"status": "healthy"}), 200
     
 @app.route('/register', methods=['POST'])
+@limiter.limit("5 per minute")
 def register():
     data = request.get_json()
+    if not data: return jsonify({"error": "No data provided"}), 400
+    
     email = data.get('email')
     password = data.get('password')
     if not email or not password: return jsonify({"error": "Email and password are required"}), 400
     if len(password) < 8: return jsonify({"error": "Password must be at least 8 characters long"}), 400
     
-    password_hash = hashlib.sha224(password.encode()).hexdigest()
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
     secret_key = generate_secure_token()
     new_user_data = {'email': email, 'password_hash': password_hash, 'secret_key': secret_key}
 
@@ -127,6 +141,7 @@ def register():
     return jsonify({"status": "success", "message": "Registration successful! You can now log in."}), 201
 
 @app.route('/login', methods=['POST'])
+@limiter.limit("10 per minute")
 def login():
     data = request.get_json()
     email = data.get('email')
@@ -137,7 +152,7 @@ def login():
     if error or not user_data:
         return jsonify({"error": "Invalid email or password"}), 401
 
-    password_hash = hashlib.sha224(password.encode()).hexdigest()
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
     if user_data.get('password_hash') == password_hash:
         logger.info(f"✅ User logged in: {email}")
         return jsonify({
@@ -148,6 +163,7 @@ def login():
             "spreadsheet_url": user_data.get('spreadsheet_url', '') # Send spreadsheet URL
         })
     else:
+        logger.warning(f"Failed login attempt for {email}")
         return jsonify({"error": "Invalid email or password"}), 401
         
 @app.route('/save_spreadsheet', methods=['POST'])
@@ -159,6 +175,10 @@ def save_spreadsheet():
 
     if not secret_key or spreadsheet_url is None:
         return jsonify({"error": "Secret key and spreadsheet URL are required"}), 400
+
+    # Basic check for Google Sheets URL format
+    if not spreadsheet_url.startswith('https://docs.google.com/spreadsheets/'):
+        return jsonify({"error": "Invalid Google Sheets URL format."}), 400
 
     _, error = supabase.update(
         'users', 
@@ -172,8 +192,7 @@ def save_spreadsheet():
     logger.info(f"✅ Spreadsheet URL saved for user.")
     return jsonify({"status": "success", "message": "Spreadsheet URL saved successfully"})
 
-# ... (other routes can remain as placeholders)
-
+# --- Run the App ---
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
