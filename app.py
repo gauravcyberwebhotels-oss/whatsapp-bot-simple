@@ -28,7 +28,39 @@ from contextlib import contextmanager
 from functools import wraps
 import jwt
 from config import Config
-from supabase_client import supabase_client, create_client
+import requests
+
+def save_user_activity_to_supabase(email, activity_type, details=None):
+    """Save user activity using direct Supabase API calls"""
+    activity_data = {
+        'email': email,
+        'activity_type': activity_type,
+        'details': details or {},
+        'timestamp': datetime.now().isoformat(),
+        'created_at': datetime.now().isoformat()
+    }
+    
+    headers = {
+        'Authorization': f'Bearer {Config.SUPABASE_KEY}',
+        'apikey': Config.SUPABASE_KEY,
+        'Content-Type': 'application/json'
+    }
+    
+    try:
+        response = requests.post(
+            f"{Config.SUPABASE_URL}/rest/v1/user_activities",
+            headers=headers,
+            json=activity_data
+        )
+        if response.status_code == 201:
+            logger.info(f"✅ Activity saved to Supabase for {email}")
+            return True
+        else:
+            logger.error(f"❌ Failed to save activity: {response.status_code}")
+            return False
+    except Exception as e:
+        logger.error(f"❌ Supabase API error: {e}")
+        return False
 
 # Enhanced logging configuration
 logging.basicConfig(
