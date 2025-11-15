@@ -14,19 +14,28 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import secrets
 import hashlib
-import shutil  # Added for file copy
+import shutil
 from sqlalchemy.exc import IntegrityError
-from config import Config  # Import Config
+from config import Config
+from supabase import create_client, Client
 
 app = Flask(__name__)
 app.config.from_object(Config)
 db = SQLAlchemy(app)
 
-# FIXED CORS - Allow specific origins
+# Initialize Supabase client
+try:
+    supabase: Client = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_KEY'])
+    print("✅ Supabase client initialized successfully")
+except Exception as e:
+    print(f"❌ Supabase initialization error: {e}")
+    supabase = None
+
+# CORS configuration
 CORS(app, origins=[
-    'https://whatsapp-bot-simple.onrender.com',  # Your frontend
-    'http://localhost:3000',                     # Local dev
-    '*'                                          # Fallback for testing (remove in prod for security)
+    'https://whatsapp-bot-simple.onrender.com',
+    'http://localhost:3000',
+    '*'
 ])
 
 # Database Models
@@ -55,88 +64,178 @@ user_sessions = {}
 
 BOT_SERVERS = Config.BOT_SERVERS
 
-# JSON data storage file
-JSON_DATA_FILE = 'user_activity_data.json'
-
-def load_json_data():
-    """Load user activity data from JSON file"""
+# Supabase data storage functions
+def save_user_activity_to_supabase(email, activity_type, details=None):
+    """Save user activity to Supabase"""
+    if not supabase:
+        print("❌ Supabase not available for saving activity")
+        return False
+    
     try:
-        if os.path.exists(JSON_DATA_FILE):
-            with open(JSON_DATA_FILE, 'r') as f:
-                return json.load(f)
-    except:
-        pass
-    return {"users": {}, "system_stats": {}}
-
-def save_json_data(data):
-    """Save user activity data to JSON file"""
-    try:
-        with open(JSON_DATA_FILE, 'w') as f:
-            json.dump(data, f, indent=2)
+        activity_data = {
+            'email': email,
+            'activity_type': activity_type,
+            'details': details or {},
+            'timestamp': datetime.now().isoformat(),
+            'created_at': datetime.now().isoformat()
+        }
+        
+        response = supabase.table('user_activities').insert(activity_data).execute()
+        
+        if hasattr(response, 'error') and response.error:
+            print(f"❌ Supabase activity save error: {response.error}")
+            return False
+        
+        print(f"✅ Activity saved to Supabase for {email}")
         return True
-    except:
+        
+    except Exception as e:
+        print(f"❌ Error saving activity to Supabase: {e}")
         return False
 
-def update_user_activity(email, activity_type, details=None):
-    """Update user activity in JSON file"""
-    data = load_json_data()
+def get_user_activities_from_supabase(email):
+    """Get user activities from Supabase"""
+    if not supabase:
+        print("❌ Supabase not available for fetching activities")
+        return []
+    
+    try:
+        response = supabase.table('user_activities')\
+            .select('*')\
+            .eq('email', email)\
+            .order('timestamp', desc=True)\
+            .limit(100)\
+            .execute()
+        
+        if hasattr(response, 'error') and response.error:
+            print(f"❌ Supabase activity fetch error: {response.error}")
+            return []
+        
+        return response.data if hasattr(response, 'data') else []
+        
+    except Exception as e:
+        print(f"❌ Error fetching activities from Supabase: {e}")
+        return []
 
-    if email not in data["users"]:
-        data["users"][email] = {
-            "first_seen": datetime.now().isoformat(),
-            "last_login": None,
-            "last_activity": None,
-            "activity_history": [],
-            "files_uploaded": [],
-            "bot_sessions": [],
-            "status": "active"
+def get_user_stats_from_supabase(email):
+    """Get user statistics from Supabase"""
+    if not supabase:
+        print("❌ Supabase not available for fetching stats")
+        return {}
+    
+    try:
+        # Get first seen
+        first_response = supabase.table('user_activities')\
+            .select('timestamp')\
+            .eq('email', email)\
+            .order('timestamp', asc=True)\
+            .limit(1)\
+            .execute()
+        
+        first_seen = first_response.data[0]['timestamp'] if first_response.data else None
+        
+        # Get last login
+        login_response = supabase.table('user_activities')\
+            .select('timestamp')\
+            .eq('email', email)\
+            .eq('activity_type', 'login')\
+            .order('timestamp', desc=True)\
+            .limit(1)\
+            .execute()
+        
+        last_login = login_response.data[0]['timestamp'] if login_response.data else None
+        
+        # Get all activities for this user
+        activities_response = supabase.table('user_activities')\
+            .select('activity_type')\
+            .eq('email', email)\
+            .execute()
+        
+        # Count different activity types
+        activity_counts = {}
+        file_uploads = 0
+        bot_sessions = 0
+        
+        if hasattr(activities_response, 'data'):
+            for activity in activities_response.data:
+                activity_type = activity['activity_type']
+                activity_counts[activity_type] = activity_counts.get(activity_type, 0) + 1
+                
+                if activity_type == 'file_upload':
+                    file_uploads += 1
+                elif activity_type == 'bot_session':
+                    bot_sessions += 1
+        
+        return {
+            'first_seen': first_seen,
+            'last_login': last_login,
+            'activity_counts': activity_counts,
+            'total_activities': sum(activity_counts.values()),
+            'files_uploaded': file_uploads,
+            'bot_sessions': bot_sessions,
+            'status': 'active'
         }
+        
+    except Exception as e:
+        print(f"❌ Error fetching stats from Supabase: {e}")
+        return {}
 
-    user_data = data["users"][email]
-    user_data["last_activity"] = datetime.now().isoformat()
+def get_system_stats_from_supabase():
+    """Get system statistics from Supabase"""
+    if not supabase:
+        print("❌ Supabase not available for system stats")
+        return {}
+    
+    try:
+        # Get total unique users
+        users_response = supabase.table('user_activities')\
+            .select('email')\
+            .execute()
+        
+        if hasattr(users_response, 'data'):
+            unique_emails = set([activity['email'] for activity in users_response.data])
+            total_users = len(unique_emails)
+        else:
+            total_users = 0
+        
+        return {
+            'total_users': total_users,
+            'last_updated': datetime.now().isoformat(),
+            'active_sessions': len(user_sessions)
+        }
+        
+    except Exception as e:
+        print(f"❌ Error fetching system stats from Supabase: {e}")
+        return {}
 
-    activity_record = {
-        "timestamp": datetime.now().isoformat(),
-        "type": activity_type,
-        "details": details or {}
+def update_user_activity(email, activity_type, details=None):
+    """Update user activity in Supabase"""
+    success = save_user_activity_to_supabase(email, activity_type, details)
+    
+    if not success:
+        print(f"⚠️ Failed to save activity to Supabase for {email}")
+    
+    return success
+
+# Compatibility functions
+def load_json_data():
+    """Compatibility function - now uses Supabase"""
+    return {
+        "users": {},
+        "system_stats": get_system_stats_from_supabase()
     }
 
-    user_data["activity_history"].append(activity_record)
-
-    # Keep only last 100 activities
-    if len(user_data["activity_history"]) > 100:
-        user_data["activity_history"] = user_data["activity_history"][-100:]
-
-    if activity_type == "login":
-        user_data["last_login"] = datetime.now().isoformat()
-    elif activity_type == "file_upload":
-        if "files_uploaded" not in user_data:
-            user_data["files_uploaded"] = []
-        user_data["files_uploaded"].append(details)
-    elif activity_type == "bot_session":
-        if "bot_sessions" not in user_data:
-            user_data["bot_sessions"] = []
-        user_data["bot_sessions"].append(details)
-
-    # Update system stats
-    if "system_stats" not in data:
-        data["system_stats"] = {}
-
-    data["system_stats"]["total_users"] = len(data["users"])
-    data["system_stats"]["last_updated"] = datetime.now().isoformat()
-    data["system_stats"]["active_sessions"] = len(user_sessions)
-
-    save_json_data(data)
+def save_json_data(data):
+    """Compatibility function - data is now saved directly to Supabase"""
     return True
 
-# Keep-alive mechanism to prevent Render shutdown
+# Keep-alive mechanism
 def keep_alive_mechanism():
     """Prevent Render from shutting down by periodic activity"""
     while True:
         try:
-            # Log activity to keep the process alive
             print(f"🔄 Keep-alive ping at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            time.sleep(300)  # Ping every 5 minutes
+            time.sleep(300)
         except Exception as e:
             print(f"Keep-alive error: {e}")
             time.sleep(60)
@@ -145,7 +244,7 @@ def keep_alive_mechanism():
 keep_alive_thread = threading.Thread(target=keep_alive_mechanism, daemon=True)
 keep_alive_thread.start()
 
-# Email configuration from Config
+# Email configuration
 EMAIL_CONFIG = {
     'smtp_server': Config.SMTP_SERVER,
     'smtp_port': Config.SMTP_PORT,
@@ -155,11 +254,16 @@ EMAIL_CONFIG = {
 
 @app.route('/')
 def home():
-    return "🚀 WhatsApp Bot API - Multi-User System"
+    return "🚀 WhatsApp Bot API - Multi-User System with Supabase"
 
 @app.route('/health')
 def health():
-    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
+    supabase_status = supabase is not None
+    return jsonify({
+        "status": "healthy", 
+        "timestamp": datetime.now().isoformat(),
+        "supabase_connected": supabase_status
+    })
 
 @app.route('/ping')
 def ping():
@@ -167,13 +271,14 @@ def ping():
 
 @app.route('/stats')
 def get_stats():
-    """Get system statistics"""
-    data = load_json_data()
+    """Get system statistics from Supabase"""
+    system_stats = get_system_stats_from_supabase()
     return jsonify({
-        "total_users": data.get("system_stats", {}).get("total_users", 0),
+        "total_users": system_stats.get("total_users", 0),
         "active_bots": len(user_sessions),
-        "last_updated": data.get("system_stats", {}).get("last_updated"),
-        "server_count": len(BOT_SERVERS)
+        "last_updated": system_stats.get("last_updated"),
+        "server_count": len(BOT_SERVERS),
+        "supabase_connected": supabase is not None
     })
 
 @app.route('/test_email')
@@ -232,7 +337,7 @@ def register():
         try:
             db.session.commit()
 
-            # Update JSON activity
+            # Update activity in Supabase
             update_user_activity(email, "registered", {
                 "secret_key": secret_key,
                 "verification_code": verification_code
@@ -276,7 +381,7 @@ def verify_email():
             user.verification_code = None
             db.session.commit()
 
-            # Update JSON activity
+            # Update activity in Supabase
             update_user_activity(email, "verified")
 
             return jsonify({"status": "success", "message": "Email verified successfully"})
@@ -308,7 +413,7 @@ def login():
         user.last_login = datetime.now()
         db.session.commit()
 
-        # Update JSON activity
+        # Update activity in Supabase
         update_user_activity(email, "login", {
             "secret_key": user.secret_key,
             "credits": user.credits
@@ -343,7 +448,7 @@ def save_spreadsheet():
         user.spreadsheet_url = spreadsheet_url
         db.session.commit()
 
-        # Update JSON activity
+        # Update activity in Supabase
         update_user_activity(user.email, "file_upload", {
             "file_type": "spreadsheet",
             "url": spreadsheet_url,
@@ -415,7 +520,7 @@ def start_bot():
             'process': None
         }
 
-        # Update JSON activity
+        # Update activity in Supabase
         update_user_activity(user.email, "bot_session", {
             "session_id": user_id,
             "action": "start",
@@ -467,7 +572,7 @@ def stop_bot():
                     user_sessions[user_id]['process'].terminate()
                 user_sessions[user_id]['status'] = 'stopped'
 
-                # Update JSON activity
+                # Update activity in Supabase
                 update_user_activity(email, "bot_session", {
                     "session_id": user_id,
                     "action": "stop",
@@ -526,9 +631,8 @@ def get_user_profile():
         if not user:
             return jsonify({"error": "Invalid secret key"}), 401
 
-        # Get additional data from JSON
-        json_data = load_json_data()
-        user_json_data = json_data.get("users", {}).get(user.email, {})
+        # Get additional data from Supabase
+        user_stats = get_user_stats_from_supabase(user.email)
 
         return jsonify({
             "email": user.email,
@@ -537,10 +641,11 @@ def get_user_profile():
             "spreadsheet_url": user.spreadsheet_url,
             "joined_date": user.created_at.isoformat() if user.created_at else None,
             "last_login": user.last_login.isoformat() if user.last_login else None,
-            "first_seen": user_json_data.get("first_seen"),
-            "total_activities": len(user_json_data.get("activity_history", [])),
-            "files_uploaded": len(user_json_data.get("files_uploaded", [])),
-            "bot_sessions": len(user_json_data.get("bot_sessions", []))
+            "first_seen": user_stats.get("first_seen"),
+            "total_activities": user_stats.get("total_activities", 0),
+            "files_uploaded": user_stats.get("files_uploaded", 0),
+            "bot_sessions": user_stats.get("bot_sessions", 0),
+            "activity_counts": user_stats.get("activity_counts", {})
         })
 
     except Exception as e:
@@ -557,12 +662,22 @@ def get_user_activity():
         if not user:
             return jsonify({"error": "Invalid secret key"}), 401
 
-        json_data = load_json_data()
-        user_data = json_data.get("users", {}).get(user.email, {})
+        # Get activities from Supabase
+        activities = get_user_activities_from_supabase(user.email)
+        user_stats = get_user_stats_from_supabase(user.email)
 
         return jsonify({
             "status": "success",
-            "user_data": user_data
+            "user_data": {
+                "email": user.email,
+                "first_seen": user_stats.get("first_seen"),
+                "last_login": user_stats.get("last_login"),
+                "last_activity": user_stats.get("last_login"),
+                "activity_history": activities,
+                "files_uploaded": user_stats.get("files_uploaded", 0),
+                "bot_sessions": user_stats.get("bot_sessions", 0),
+                "status": user_stats.get("status", "active")
+            }
         })
 
     except Exception as e:
@@ -629,7 +744,7 @@ def start_user_bot(user_id, spreadsheet_url, assigned_server, email):
         # Update session status
         user_sessions[user_id]['status'] = 'running'
 
-        # Update JSON activity
+        # Update activity in Supabase
         update_user_activity(email, "bot_session", {
             "session_id": user_id,
             "action": "running",
@@ -647,7 +762,7 @@ def start_user_bot(user_id, spreadsheet_url, assigned_server, email):
         # Update status after completion
         user_sessions[user_id]['status'] = 'completed'
 
-        # Update JSON activity
+        # Update activity in Supabase
         update_user_activity(email, "bot_session", {
             "session_id": user_id,
             "action": "completed",
@@ -661,7 +776,7 @@ def start_user_bot(user_id, spreadsheet_url, assigned_server, email):
         if user_id in user_sessions:
             user_sessions[user_id]['status'] = 'error'
 
-        # Update JSON activity
+        # Update activity in Supabase
         update_user_activity(email, "bot_session", {
             "session_id": user_id,
             "action": "error",
@@ -697,6 +812,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException, SessionNotCreatedException, StaleElementReferenceException
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
+
 # --- USER-SPECIFIC CONFIGURATION ---
 SHEET_URL = "{user_sheet_url}" # DYNAMIC - User's personal spreadsheet
 GOOGLE_CREDENTIALS_FILE = 'credentials.json'
@@ -708,15 +824,17 @@ RETRY_DELAY = 2
 MESSAGE_DELAY_MIN = 120
 MESSAGE_DELAY_MAX = 180
 automation_running = True
+
 print("=" * 80)
 print("🚀 PERSONAL WHATSAPP BOT STARTING")
 print(f"👤 USER: {email}")
 print(f"📊 SPREADSHEET: {user_sheet_url}")
 print(f"🆔 USER ID: {user_id}")
 print("=" * 80)
+
 # Keep-alive mechanism for 24/7 operation
 def render_keep_alive():
-    \"""Prevent Render from shutting down the bot\"""
+    """Prevent Render from shutting down the bot"""
     while automation_running:
         try:
             print(f"🔄 Render keep-alive: {{time.strftime('%Y-%m-%d %H:%M:%S')}}")
@@ -724,17 +842,20 @@ def render_keep_alive():
         except Exception as e:
             print(f"Keep-alive error: {{e}}")
             time.sleep(60)
+
 # Start keep-alive thread
 keep_alive_thread = threading.Thread(target=render_keep_alive, daemon=True)
 keep_alive_thread.start()
+
 class AIPageDetector:
-    \"""AI-powered contact detection - OPTIONAL, skip on rate limit\"""
+    """AI-powered contact detection - OPTIONAL, skip on rate limit"""
     def __init__(self, api_key):
         self.api_key = api_key
         self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent"
         self.rate_limited = False
+
     def detect_contact_in_sidebar(self, screenshot_path, phone_number):
-        \"""Enhanced contact detection - SKIP if rate limited\"""
+        """Enhanced contact detection - SKIP if rate limited"""
         if self.rate_limited:
             print(" 🤖 AI skipped due to rate limit - assuming contact found")
             return True
@@ -752,7 +873,7 @@ class AIPageDetector:
                         return True
                     encoded_image = base64.b64encode(image_data).decode('utf-8')
                
-                prompt = f\"\"\"
+                prompt = f"""
                 Analyze this WhatsApp Web screenshot after searching for phone number {{phone_number}}.
                 TASK: Check if ANY contact/search result appears in the LEFT SIDEBAR area.
                 LOOK FOR in the LEFT SIDEBAR (left panel):
@@ -776,7 +897,7 @@ class AIPageDetector:
                 - "NO_CONTACT" if sidebar is empty or shows no results message
                 - "UNCLEAR" if cannot determine clearly
                 Be accurate but lean towards CONTACT_FOUND if any text/images appear in sidebar besides headers.
-                \"\"\"
+                """
                
                 payload = {{
                     "contents": [
@@ -850,8 +971,9 @@ class AIPageDetector:
                     time.sleep(RETRY_DELAY)
        
         return True
+
 class WhatsAppStateManager:
-    \"""Advanced state management for WhatsApp Web with comprehensive page detection\"""
+    """Advanced state management for WhatsApp Web with comprehensive page detection"""
     def __init__(self, driver, ai_detector):
         self.driver = driver
         self.ai_detector = ai_detector
@@ -862,8 +984,9 @@ class WhatsAppStateManager:
         self.force_success_count = 0
         self.last_force_time = 0
         self.readiness_score = 0
+
     def monitor_page_activity(self):
-        \"""Monitor all page activities and transitions\"""
+        """Monitor all page activities and transitions"""
         current_url = self.driver.current_url
         page_title = self.driver.title
         window_handles = len(self.driver.window_handles)
@@ -882,16 +1005,18 @@ class WhatsAppStateManager:
             self.page_activity_log.pop(0)
        
         return activity_info
+
     def detect_page_transition(self):
-        \"""Detect if page has transitioned significantly\"""
+        """Detect if page has transitioned significantly"""
         activity = self.monitor_page_activity()
        
         url_changed = activity['url'] != self.last_url
         self.last_url = activity['url']
        
         return url_changed or activity['state'] != self.current_state
+
     def get_comprehensive_page_state(self):
-        \"""Get comprehensive page state with detailed page detection\"""
+        """Get comprehensive page state with detailed page detection"""
         current_activity = self.monitor_page_activity()
        
         page_state = self._detect_whatsapp_page_state()
@@ -903,8 +1028,9 @@ class WhatsAppStateManager:
             self.state_history.pop(0)
        
         return page_state
+
     def _detect_whatsapp_page_state(self):
-        \"""Enhanced WhatsApp page state detection\"""
+        """Enhanced WhatsApp page state detection"""
         try:
             page_source = self.driver.page_source
             current_url = self.driver.current_url
@@ -1033,8 +1159,9 @@ class WhatsAppStateManager:
         except Exception as e:
             print(f" ⚠️ Page state detection failed: {{e}}")
             return "DETECTION_ERROR"
+
     def _calculate_readiness_score(self):
-        \"""Real-time score based on interactive UI elements\"""
+        """Real-time score based on interactive UI elements"""
         score = 0
         elements_to_check = [
             ('//div[@contenteditable="true"][@data-tab="3"]', 'Search Box'),
@@ -1053,8 +1180,9 @@ class WhatsAppStateManager:
        
         self.readiness_score = score
         return score
+
     def wait_for_complete_loading(self, timeout=120):
-        \"""Wait for complete WhatsApp loading\"""
+        """Wait for complete WhatsApp loading"""
         print("\\n" + "="*60)
         print("🔍 REAL-TIME WHATSAPP PAGE STATE MONITOR")
         print("="*60)
@@ -1153,8 +1281,9 @@ class WhatsAppStateManager:
        
         print("❌ Timeout waiting for loading")
         return False
+
     def _force_chat_detection(self):
-        \"""Force chat detection\"""
+        """Force chat detection"""
         try:
             print(" 🔍 Force checking...")
        
@@ -1190,8 +1319,9 @@ class WhatsAppStateManager:
         except Exception as e:
             print(f" ❌ Force error: {{e}}")
             return False
+
     def verify_complete_loading(self):
-        \"""Final verification\"""
+        """Final verification"""
         print(" 🔍 Final verification...")
        
         verification_steps = [
@@ -1215,8 +1345,9 @@ class WhatsAppStateManager:
         print(f" 📊 Verification: {{successful_verifications}}/4")
        
         return successful_verifications >= 2
+
     def _verify_ui_components(self):
-        \"""Verify UI components\"""
+        """Verify UI components"""
         components = [
             ('//div[@contenteditable="true"][@data-tab="3"]', 'Search Box'),
             ('//div[@data-testid="chat-list"]', 'Chat List'),
@@ -1235,8 +1366,9 @@ class WhatsAppStateManager:
                 print(f" ⚠️ {{name}} not found")
                 return False
         return True
+
     def _verify_javascript_environment(self):
-        \"""Verify JS environment\"""
+        """Verify JS environment"""
         try:
             script = """
             try {{
@@ -1255,8 +1387,9 @@ class WhatsAppStateManager:
                     result.get('storeReady', False))
         except:
             return False
+
     def _verify_interactivity(self):
-        \"""Verify interactivity\"""
+        """Verify interactivity"""
         try:
             search_box = self.driver.find_element(By.XPATH, '//div[@contenteditable="true"][@data-tab="3"]')
             search_box.click()
@@ -1264,8 +1397,9 @@ class WhatsAppStateManager:
             return True
         except:
             return False
+
 def monitor_user_interrupt():
-    \"""Monitor interrupt\"""
+    """Monitor interrupt"""
     global automation_running
     try:
         while automation_running:
@@ -1273,8 +1407,9 @@ def monitor_user_interrupt():
     except KeyboardInterrupt:
         automation_running = False
         print("\\n🛑 User interrupt - stopping...")
+
 def kill_chrome_processes():
-    \"""Kill automation Chrome processes\"""
+    """Kill automation Chrome processes"""
     print(" 🔴 Closing Chrome processes...")
     try:
         for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
@@ -1337,8 +1472,9 @@ def kill_chrome_processes():
        
     except Exception as e:
         print(f" ⚠️ Cleanup warning: {{e}}")
+
 def cleanup_temp_files():
-    \"""Clean temp files\"""
+    """Clean temp files"""
     try:
         print(" 🧹 Cleaning temp files...")
        
@@ -1361,15 +1497,17 @@ def cleanup_temp_files():
        
     except Exception as e:
         print(f" ⚠️ Temp cleanup warning: {{e}}")
+
 def reset_chrome_environment():
-    \"""Reset Chrome env\"""
+    """Reset Chrome env"""
     print(" 🔄 Resetting Chrome...")
     kill_chrome_processes()
     cleanup_temp_files()
     print(" ✅ Reset complete")
     time.sleep(1)
+
 def setup_google_sheets():
-    \"""Setup Google Sheets\"""
+    """Setup Google Sheets"""
     for attempt in range(MAX_RETRIES):
         try:
             print("📊 Connecting to Sheets...")
@@ -1385,8 +1523,9 @@ def setup_google_sheets():
             if attempt < MAX_RETRIES - 1:
                 time.sleep(RETRY_DELAY)
     return None
+
 def create_driver():
-    \"""Create isolated Chrome driver\"""
+    """Create isolated Chrome driver"""
     for attempt in range(MAX_RETRIES):
         try:
             print(f"🔧 Chrome Setup {{attempt + 1}}/{{MAX_RETRIES}}")
@@ -1461,8 +1600,9 @@ def create_driver():
                 reset_chrome_environment()
     print("❌ All setups failed.")
     return None
+
 def take_screenshot(driver, filename):
-    \"""Take screenshot\"""
+    """Take screenshot"""
     for attempt in range(MAX_RETRIES):
         try:
             screenshot_path = f"{{filename}}_{{int(time.time())}}.png"
@@ -1484,8 +1624,9 @@ def take_screenshot(driver, filename):
             if attempt < MAX_RETRIES - 1:
                 time.sleep(1)
     return None
+
 def format_phone_number(phone):
-    \"""Format phone\"""
+    """Format phone"""
     try:
         clean_phone = re.sub(r'\\D', '', str(phone))
        
@@ -1502,8 +1643,9 @@ def format_phone_number(phone):
     except Exception as e:
         print(f"❌ Phone format error: {{e}}")
         return ""
+
 def clear_search_comprehensive(driver):
-    \"""Clear search - HANDLE STALE ELEMENTS\"""
+    """Clear search - HANDLE STALE ELEMENTS"""
     for attempt in range(MAX_RETRIES):
         try:
             print(" 🧹 Clearing search...")
@@ -1545,8 +1687,9 @@ def clear_search_comprehensive(driver):
             if attempt < MAX_RETRIES - 1:
                 time.sleep(RETRY_DELAY)
     return False
+
 def search_contact_fast(driver, phone_number):
-    \"""FAST SEARCH - 1 ATTEMPT ONLY, NO WAITING FOR RESULTS\"""
+    """FAST SEARCH - 1 ATTEMPT ONLY, NO WAITING FOR RESULTS"""
     try:
         print(f" 🔍 FAST SEARCH: {{phone_number}}")
      
@@ -1572,8 +1715,9 @@ def search_contact_fast(driver, phone_number):
     except Exception as e:
         print(f" ❌ Fast search failed: {{e}}")
         return False
+
 def check_no_contacts_message(driver):
-    \"""Check no contacts - FAST\"""
+    """Check no contacts - FAST"""
     try:
         print(" 🔍 Checking no contacts...")
         no_contact_selectors = [
@@ -1614,8 +1758,9 @@ def check_no_contacts_message(driver):
     except:
         print(" ⚠️ Check error - assume found")
         return False
+
 def click_contact_comprehensive(driver, phone_number):
-    \"""ULTRA-POWERFUL CLICKING - CLICKS WHATEVER APPEARS AFTER SEARCH\"""
+    """ULTRA-POWERFUL CLICKING - CLICKS WHATEVER APPEARS AFTER SEARCH"""
     print(f" 🖱️ POWER CLICKING on contact for: {{phone_number}}")
  
     # ULTRA-POWERFUL CLICKING STRATEGIES (in priority order)
@@ -1660,8 +1805,9 @@ def click_contact_comprehensive(driver, phone_number):
  
     print(" 💥 ALL CLICKING STRATEGIES FAILED")
     return False
+
 def click_first_visible_contact_aggressive(driver):
-    \"""AGGRESSIVELY CLICK FIRST VISIBLE CONTACT - SIMPLE BUT EFFECTIVE\"""
+    """AGGRESSIVELY CLICK FIRST VISIBLE CONTACT - SIMPLE BUT EFFECTIVE"""
     print(" 👆 AGGRESSIVE FIRST CONTACT CLICK")
  
     # Multiple contact selectors (updated for current WhatsApp)
@@ -1710,8 +1856,9 @@ def click_first_visible_contact_aggressive(driver):
             continue
  
     return False
+
 def click_direct_phone_match(driver, phone_number):
-    \"""DIRECT PHONE MATCH - CLICK ANY ELEMENT CONTAINING THE PHONE NUMBER\"""
+    """DIRECT PHONE MATCH - CLICK ANY ELEMENT CONTAINING THE PHONE NUMBER"""
     print(" 📱 DIRECT PHONE MATCH STRATEGY")
  
     # Get partial numbers for matching
@@ -1775,8 +1922,9 @@ def click_direct_phone_match(driver, phone_number):
             continue
  
     return False
+
 def click_smart_search_result(driver, phone_number):
-    \"""SMART CLICKING - UNDERSTANDS SEARCH CONTEXT\"""
+    """SMART CLICKING - UNDERSTANDS SEARCH CONTEXT"""
     print(" 🧠 SMART SEARCH RESULT CLICK")
  
     try:
@@ -1847,8 +1995,9 @@ def click_smart_search_result(driver, phone_number):
         print(f" ⚠️ Smart click failed: {{e}}")
  
     return False
+
 def click_any_visible_result_element(driver):
-    \"""CLICK ANY VISIBLE ELEMENT IN SEARCH RESULTS - NUCLEAR OPTION\"""
+    """CLICK ANY VISIBLE ELEMENT IN SEARCH RESULTS - NUCLEAR OPTION"""
     print(" 💥 CLICK ANY VISIBLE RESULT")
  
     try:
@@ -1896,8 +2045,9 @@ def click_any_visible_result_element(driver):
         print(f" ⚠️ Visible click failed: {{e}}")
  
     return False
+
 def javascript_force_click_all_strategies(driver, phone_number):
-    \"""JAVASCRIPT NUCLEAR OPTION - TRY EVERYTHING\"""
+    """JAVASCRIPT NUCLEAR OPTION - TRY EVERYTHING"""
     print(" ⚡ JAVASCRIPT FORCE CLICK - NUCLEAR")
  
     try:
@@ -1962,8 +2112,9 @@ def javascript_force_click_all_strategies(driver, phone_number):
         print(f" ⚠️ Nuclear click failed: {{e}}")
  
     return False
+
 def click_using_coordinates(driver):
-    \"""COORDINATE-BASED CLICKING - ABSOLUTE FALLBACK\"""
+    """COORDINATE-BASED CLICKING - ABSOLUTE FALLBACK"""
     print(" 🎯 COORDINATE-BASED CLICKING")
  
     try:
@@ -2007,8 +2158,9 @@ def click_using_coordinates(driver):
         print(f" ⚠️ Coordinate click failed: {{e}}")
  
     return False
+
 def verify_chat_opened_comprehensive(driver):
-    \"""Verify chat - IMPROVED WITH BETTER SELECTORS AND POLLING\"""
+    """Verify chat - IMPROVED WITH BETTER SELECTORS AND POLLING"""
     print(" 🔍 Verifying chat...")
     # Poll for chat elements
     max_poll = 10
@@ -2048,8 +2200,9 @@ def verify_chat_opened_comprehensive(driver):
             time.sleep(0.5)
     print(" ❌ Chat verification failed after polling")
     return False
+
 def send_message_guaranteed(driver, message):
-    \"""GUARANTEED MESSAGE SENDING - FOCUSED ON TYPING AND SENDING\"""
+    """GUARANTEED MESSAGE SENDING - FOCUSED ON TYPING AND SENDING"""
     print(f" 💬 GUARANTEED SENDING: '{{message[:50]}}...'")
  
     for attempt in range(MAX_RETRIES):
@@ -2157,8 +2310,9 @@ def send_message_guaranteed(driver, message):
  
     print(" 💥 ALL SEND ATTEMPTS FAILED")
     return False
+
 def click_send_button(driver):
-    \"""Click send button as backup\"""
+    """Click send button as backup"""
     try:
         send_buttons = [
             '//button[@data-testid="send"]',
@@ -2179,8 +2333,9 @@ def click_send_button(driver):
         return False
     except:
         return False
+
 def verify_message_sent(driver, message):
-    \"""Verify message was sent\"""
+    """Verify message was sent"""
     try:
         # Check if message appears in chat
         script = """
@@ -2197,8 +2352,9 @@ def verify_message_sent(driver, message):
         return result
     except:
         return False
+
 def update_sheet_status_safely(worksheet, row, status):
-    \"""Update sheet\"""
+    """Update sheet"""
     for attempt in range(MAX_RETRIES):
         try:
             worksheet.update_cell(row, 3, status)
@@ -2209,8 +2365,9 @@ def update_sheet_status_safely(worksheet, row, status):
             if attempt < MAX_RETRIES - 1:
                 time.sleep(RETRY_DELAY)
     return False
+
 def wait_with_progress(seconds, reason="Next"):
-    \"""Wait progress with random delay between 2-3 minutes\"""
+    """Wait progress with random delay between 2-3 minutes"""
     global automation_running
     total_seconds = seconds
     while total_seconds > 0 and automation_running:
@@ -2229,11 +2386,13 @@ def wait_with_progress(seconds, reason="Next"):
             break
     if automation_running:
         print(" " * 50, end='\\r')
+
 def get_random_delay():
-    \"""Get random delay between 2-3 minutes\"""
+    """Get random delay between 2-3 minutes"""
     return random.randint(MESSAGE_DELAY_MIN, MESSAGE_DELAY_MAX)
+
 def cleanup_resources_safe(driver=None):
-    \"""Cleanup\"""
+    """Cleanup"""
     global automation_running
     if not automation_running:
         print("🧹 Emergency cleanup...")
@@ -2250,12 +2409,14 @@ def cleanup_resources_safe(driver=None):
            
         except Exception as e:
             print(f"⚠️ Cleanup error: {{e}}")
+
 def check_automation_should_continue():
-    \"""Check continue\"""
+    """Check continue"""
     global automation_running
     return automation_running
+
 def run_comprehensive_automation(driver, worksheet, state_manager):
-    \"""Main automation - FOCUSED ON SENDING MESSAGES\"""
+    """Main automation - FOCUSED ON SENDING MESSAGES"""
     global automation_running
     print("\\n" + "="*60)
     print("🚀 WHATSAPP MESSAGE SENDER")
@@ -2393,8 +2554,9 @@ def run_comprehensive_automation(driver, worksheet, state_manager):
         import traceback
         traceback.print_exc()
         return success_count, fail_count, not_found_count, total_processed
+
 def main():
-    \"""Main\"""
+    """Main"""
     global automation_running
     print("\\n🚀 WHATSAPP MESSAGE BOT")
     print("🎯 FOCUS: TYPING AND SENDING")
@@ -2494,9 +2656,11 @@ def main():
                 print("⚠️ Already closed.")
        
         print("\\n👋 Done.")
+
 if __name__ == "__main__":
     main()
 '''
+
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
