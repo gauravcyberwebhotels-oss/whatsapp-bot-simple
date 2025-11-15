@@ -2,33 +2,15 @@ services:
   - type: web
     name: whatsapp-bot-main
     env: python
-    plan: free
+    plan: free # or your preferred plan
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: whatsapp_bot_db
-          property: connectionString
-      - key: a605e8a61862c381e124448307639e38481f295e3d5753d13b68ff723bc50ffe
-        generateValue: true
-      - key: c693bc92f011e86ac876e035bcd84e19d0c42cd046dd3ddbcf042050bc45473d
+      - key: SECRET_KEY
         generateValue: true
       - key: SUPABASE_URL
-        value: https://dakroxgamegsqbwqpcah.supabase.co
+        value: "https://dakroxgamegsqbwqpcah.supabase.co" # Paste YOUR Supabase URL here
       - key: SUPABASE_KEY
-        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRha3JveGdhbWVnc3Fid3FwY2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODU1NDgsImV4cCI6MjA3ODc2MTU0OH0.5UIGJfWkUtV3j7bNq7hyZ4gCk5DPx03iDPLRNlm9Wcs
-      - key: SMTP_SERVER
-        value: smtp.gmail.com
-      - key: SMTP_PORT
-        value: 587
-      - key: EMAIL_ADDRESS
-        value: gauravcyberwebhotels@gmail.com
-      - key: EMAIL_PASSWORD
-        value: mdyd lhin edma qxis
-
-databases:
-  - name: whatsapp_bot_db
-    plan: free
-    databaseName: whatsapp_bot
-    user: whatsapp_bot_user
+        value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRha3JveGdhbWVnc3Fid3FwY2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODU1NDgsImV4cCI6MjA3ODc2MTU0OH0.5UIGJfWkUtV3j7bNq7hyZ4gCk5DPx03iDPLRNlm9Wcs" # Paste YOUR Supabase anon key here
+      - key: PYTHON_VERSION
+        value: 3.11.5 # Recommended for Render
