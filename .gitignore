@@ -1,32 +1,17 @@
+# Environment variables - NEVER COMMIT
+.env
+.env.*
+*.env
+
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 .Python
 env/
 venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Database
-*.db
-*.sqlite3
-
-# Credentials
-credentials.json
-*.key
-*.pem
-.env
-
-# Logs
-*.log
-logs/
-
-# OS
-.DS_Store
-Thumbs.db
+.venv/
 
 # IDE
 .vscode/
@@ -34,6 +19,10 @@ Thumbs.db
 *.swp
 *.swo
 
-# Temporary files
-tmp/
-temp/
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
