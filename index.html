@@ -16,10 +16,24 @@
         @media (max-width: 768px) { .main-content { grid-template-columns: 1fr; } }
         .panel { background: var(--light); border-radius: 15px; padding: 30px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .panel h2 { color: var(--dark); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-size: 1.5rem; }
-        .form-group { margin-bottom: 25px; }
+        .form-group { margin-bottom: 25px; position: relative; }
         label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark); }
         input { width: 100%; padding: 15px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 16px; transition: all 0.3s; }
         input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        .password-container { position: relative; }
+        .toggle-password { 
+            position: absolute; 
+            right: 15px; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            background: none; 
+            border: none; 
+            cursor: pointer; 
+            color: #6b7280;
+            font-size: 18px;
+            padding: 5px;
+        }
+        .toggle-password:hover { color: var(--primary); }
         .btn { flex: 1; padding: 15px 25px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; }
         .btn-secondary { background: #6b7280; color: white; }
@@ -65,17 +79,6 @@
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .logout-btn { position: absolute; top: 20px; right: 20px; background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
-        
-        /* Debug info styling */
-        .debug-info {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 8px;
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 14px;
-            color: #856404;
-        }
     </style>
 </head>
 <body>
@@ -100,7 +103,12 @@
                         </div>
                         <div class="form-group">
                             <label for="loginPassword">Password</label>
-                            <input type="password" id="loginPassword" placeholder="Your password">
+                            <div class="password-container">
+                                <input type="password" id="loginPassword" placeholder="Your password">
+                                <button type="button" class="toggle-password" onclick="togglePassword('loginPassword', 'loginEyeIcon')">
+                                    <i id="loginEyeIcon" class="fas fa-eye"></i>
+                                </button>
+                            </div>
                         </div>
                         <button class="btn btn-primary" onclick="handleLogin()">
                             <i class="fas fa-sign-in-alt"></i> Login
@@ -119,7 +127,12 @@
                         </div>
                         <div class="form-group">
                             <label for="registerPassword">Password (min 8 characters)</label>
-                            <input type="password" id="registerPassword" placeholder="Minimum 8 characters">
+                            <div class="password-container">
+                                <input type="password" id="registerPassword" placeholder="Minimum 8 characters">
+                                <button type="button" class="toggle-password" onclick="togglePassword('registerPassword', 'registerEyeIcon')">
+                                    <i id="registerEyeIcon" class="fas fa-eye"></i>
+                                </button>
+                            </div>
                         </div>
                         <button class="btn btn-primary" onclick="handleRegister()">
                             <i class="fas fa-user-plus"></i> Register
@@ -168,13 +181,9 @@
                 <p style="line-height:1.6;">
                     <strong>1. Register:</strong> Create a new account.<br>
                     <strong>2. Login:</strong> Sign into the dashboard.<br>
-                    <strong>3. Forgot Password:</strong> Click the link on the login screen to receive a reset code.<br>
-                    <strong>4. Reset:</strong> Use the auto-filled code to set a new password and log in.
+                    <strong>3. Forgot Password:</strong> Click the link on the login screen to receive a reset code via email.<br>
+                    <strong>4. Reset:</strong> Use the code to set a new password and log in.
                 </p>
-                <div class="debug-info">
-                    <strong>🔧 DEBUG MODE ACTIVE</strong><br>
-                    Reset codes are auto-filled for testing. Email service is temporarily disabled.
-                </div>
             </div>
         </div>
     </div>
@@ -202,20 +211,18 @@
     <div class="modal" id="resetPasswordModal">
         <div class="modal-content">
             <h2><i class="fas fa-lock"></i> Reset Your Password</h2>
-            
-            <div class="debug-info">
-                <strong>🔧 DEBUG MODE</strong><br>
-                Code auto-filled: <strong>556661</strong><br>
-                Email service temporarily unavailable
-            </div>
-            
             <div class="form-group">
-                <label for="resetCode">6-digit Code</label>
+                <label for="resetCode">6-digit Code from Email</label>
                 <input type="text" id="resetCode" placeholder="Enter 6-digit code" maxlength="6">
             </div>
             <div class="form-group">
                 <label for="newPassword">New Password (min 8 characters)</label>
-                <input type="password" id="newPassword" placeholder="Enter new password">
+                <div class="password-container">
+                    <input type="password" id="newPassword" placeholder="Enter new password">
+                    <button type="button" class="toggle-password" onclick="togglePassword('newPassword', 'resetEyeIcon')">
+                        <i id="resetEyeIcon" class="fas fa-eye"></i>
+                    </button>
+                </div>
             </div>
             <div style="display:flex; gap:10px;">
                 <button class="btn btn-primary" onclick="handleResetPassword()">
@@ -236,6 +243,22 @@
 
     const loading = document.getElementById('loadingOverlay');
     const statusDiv = document.getElementById('status');
+    
+    // Password toggle function
+    function togglePassword(passwordFieldId, eyeIconId) {
+        const passwordField = document.getElementById(passwordFieldId);
+        const eyeIcon = document.getElementById(eyeIconId);
+        
+        if (passwordField.type === 'password') {
+            passwordField.type = 'text';
+            eyeIcon.classList.remove('fa-eye');
+            eyeIcon.classList.add('fa-eye-slash');
+        } else {
+            passwordField.type = 'password';
+            eyeIcon.classList.remove('fa-eye-slash');
+            eyeIcon.classList.add('fa-eye');
+        }
+    }
     
     function showStatus(message, type = 'error') {
         statusDiv.textContent = message;
@@ -370,11 +393,13 @@
             // SHOW the reset password modal immediately
             document.getElementById('resetPasswordModal').style.display = 'flex';
             
-            // AUTO-FILL THE DEBUG CODE 556661
-            const debugCode = "556661";
-            document.getElementById('resetCode').value = debugCode;
-            
-            showStatus(`Reset code generated! Using debug code: ${debugCode}`, "success");
+            // If we're in debug mode and got a code, show it to the user
+            if (result.debug_code) {
+                showStatus(`Reset code: ${result.debug_code}`, "success");
+                document.getElementById('resetCode').value = result.debug_code;
+            } else {
+                showStatus("Reset code sent to your email. Check your inbox (and spam folder).", "success");
+            }
         }
     }
 
@@ -458,7 +483,7 @@
     function showResetPasswordModal() { 
         console.log("Showing reset password modal");
         hideModals();
-        document.getElementById('resetCode').value = '556661'; // Auto-fill debug code
+        document.getElementById('resetCode').value = '';
         document.getElementById('newPassword').value = '';
         document.getElementById('resetPasswordModal').style.display = 'flex'; 
     }
@@ -519,7 +544,6 @@
     // Initialize - make sure everything is reset on page load
     document.addEventListener('DOMContentLoaded', function() {
         console.log("DOM loaded - application ready");
-        console.log("DEBUG MODE: Reset code 556661 is auto-filled");
         hideModals(); // Ensure all modals are hidden on startup
         showLogin(); // Show login form by default
     });
