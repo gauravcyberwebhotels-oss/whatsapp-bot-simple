@@ -2,15 +2,19 @@ services:
   - type: web
     name: whatsapp-bot-main
     env: python
-    plan: free # or your preferred plan
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1
     envVars:
       - key: SECRET_KEY
         generateValue: true
       - key: SUPABASE_URL
-        value: "https://dakroxgamegsqbwqpcah.supabase.co" # Paste YOUR Supabase URL here
+        value: "https://dakroxgamegsqbwqpcah.supabase.co"
       - key: SUPABASE_KEY
-        value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRha3JveGdhbWVnc3Fid3FwY2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxODU1NDgsImV4cCI6MjA3ODc2MTU0OH0.5UIGJfWkUtV3j7bNq7hyZ4gCk5DPx03iDPLRNlm9Wcs" # Paste YOUR Supabase anon key here
+        value: "YOUR_SUPABASE_ANON_KEY_HERE"  # Set this in Render Dashboard
+      - key: BREVO_API_KEY
+        value: "YOUR_BREVO_API_KEY_HERE"  # Set this in Render Dashboard
+      - key: SENDER_EMAIL
+        value: "YOUR_SENDER_EMAIL_HERE"  # Set this in Render Dashboard
       - key: PYTHON_VERSION
-        value: 3.11.5 # Recommended for Render
+        value: 3.11.5
