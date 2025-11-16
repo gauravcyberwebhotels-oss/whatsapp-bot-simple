@@ -1,4 +1,4 @@
-# app.py (FIXED VERSION - GUARANTEED WORKING)
+# app.py (FIXED VERSION - PROPER TABLE HANDLING)
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -30,43 +30,112 @@ class SupabaseClient:
     def __init__(self, url, key):
         self.url = url
         self.key = key
-        self.headers = {'apikey': self.key, 'Authorization': f'Bearer {self.key}', 'Content-Type': 'application/json'}
+        self.headers = {
+            'apikey': self.key, 
+            'Authorization': f'Bearer {self.key}', 
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+        }
 
     def _make_request(self, method, endpoint, **kwargs):
         try:
-            response = requests.request(method, f"{self.url}/rest/v1/{endpoint}", headers=self.headers, timeout=10, **kwargs)
+            url = f"{self.url}/rest/v1/{endpoint}"
+            logger.info(f"Making {method} request to: {url}")
+            
+            response = requests.request(
+                method, 
+                url, 
+                headers=self.headers, 
+                timeout=30, 
+                **kwargs
+            )
+            
+            logger.info(f"Response status: {response.status_code}")
+            
+            if response.status_code == 204:  # No content
+                return {"status": "success"}, None
+                
             response.raise_for_status()
-            return response.json() if response.content else {"status": "success"}, None
-        except requests.exceptions.HTTPError as e: 
-            return None, e.response.json().get('message', 'Request failed')
-        except Exception as e: 
+            
+            if response.content:
+                return response.json(), None
+            else:
+                return {"status": "success"}, None
+                
+        except requests.exceptions.HTTPError as e:
+            error_msg = "Request failed"
+            try:
+                if e.response.content:
+                    error_data = e.response.json()
+                    error_msg = error_data.get('message', error_data.get('error', str(e)))
+            except:
+                error_msg = str(e)
+            logger.error(f"HTTP Error {e.response.status_code}: {error_msg}")
+            return None, error_msg
+            
+        except Exception as e:
+            logger.error(f"Request exception: {str(e)}")
             return None, str(e)
 
     def select(self, table, filters=None, single=False):
-        params = {k: f"eq.{v}" for k, v in filters.items()} if filters else {}
-        headers = self.headers.copy()
-        if single: 
-            headers['Accept'] = 'application/vnd.pgrst.object+json'
         try:
-            response = requests.get(f"{self.url}/rest/v1/{table}", headers=headers, params=params, timeout=10)
-            if response.status_code == 406: 
-                return None, None
+            params = {}
+            if filters:
+                params = {f"{k}": f"eq.{v}" for k, v in filters.items()}
+            
+            headers = self.headers.copy()
+            if single:
+                headers['Accept'] = 'application/vnd.pgrst.object+json'
+            
+            url = f"{self.url}/rest/v1/{table}"
+            logger.info(f"SELECT from {table} with params: {params}")
+            
+            response = requests.get(
+                url, 
+                headers=headers, 
+                params=params, 
+                timeout=30
+            )
+            
+            logger.info(f"SELECT response status: {response.status_code}")
+            
+            if response.status_code == 404:
+                return [], None  # Table doesn't exist or no data
+                
             response.raise_for_status()
-            return response.json(), None
-        except requests.exceptions.HTTPError as e: 
-            return None, e.response.json().get('message', 'Select failed')
-        except Exception as e: 
+            
+            if response.status_code == 200:
+                data = response.json()
+                if single and data:
+                    return data[0] if isinstance(data, list) else data, None
+                return data, None
+            else:
+                return [], None
+                
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                logger.warning(f"Table {table} not found or empty")
+                return [], None
+            error_msg = f"Select failed: {e.response.status_code}"
+            logger.error(error_msg)
+            return None, error_msg
+            
+        except Exception as e:
+            logger.error(f"Select exception: {str(e)}")
             return None, str(e)
 
-    def insert(self, table, data): 
+    def insert(self, table, data):
+        logger.info(f"INSERT into {table}: { {k: '***' if 'password' in k.lower() or 'token' in k.lower() else v for k, v in data.items()} }")
         return self._make_request('POST', table, json=data)
     
-    def update(self, table, filters, data): 
+    def update(self, table, filters, data):
         filter_str = '&'.join([f'{k}=eq.{v}' for k,v in filters.items()])
+        logger.info(f"UPDATE {table} WHERE {filter_str}: {data}")
         return self._make_request('PATCH', f"{table}?{filter_str}", json=data)
     
-    def delete(self, table, filters): 
+    def delete(self, table, filters):
         filter_str = '&'.join([f'{k}=eq.{v}' for k,v in filters.items()])
+        logger.info(f"DELETE from {table} WHERE {filter_str}")
         return self._make_request('DELETE', f"{table}?{filter_str}")
 
 supabase = SupabaseClient(Config.SUPABASE_URL, Config.SUPABASE_KEY)
@@ -92,7 +161,7 @@ def send_email_async(to_email, subject, body):
             logger.info(f"🔧 Using SMTP: {Config.SMTP_SERVER}:{Config.SMTP_PORT}")
             logger.info(f"🔧 From: {Config.EMAIL_ADDRESS}")
             
-            # Create SMTP connection with debug
+            # Create SMTP connection
             server = smtplib.SMTP(Config.SMTP_SERVER, Config.SMTP_PORT, timeout=30)
             server.set_debuglevel(1)  # Enable verbose debug output
             
@@ -162,7 +231,11 @@ def register():
             return jsonify({"error": "Password must be at least 8 characters."}), 400
         
         # Check if user already exists
-        existing_user, _ = supabase.select('users', filters={'email': email}, single=True)
+        existing_user, error = supabase.select('users', filters={'email': email}, single=True)
+        if error:
+            logger.error(f"Registration check error: {error}")
+            return jsonify({"error": "Database error during registration."}), 500
+            
         if existing_user:
             return jsonify({"error": "Email already registered."}), 400
         
@@ -177,7 +250,7 @@ def register():
         
         result, error = supabase.insert('users', user_data)
         if error:
-            logger.error(f"Registration error: {error}")
+            logger.error(f"Registration insert error: {error}")
             return jsonify({"error": "Database error during registration."}), 500
         
         logger.info(f"New user registered: {email}")
@@ -325,7 +398,7 @@ def forgot_password():
         result, error = supabase.insert('password_resets', reset_data)
         if error:
             logger.error(f"Failed to store reset token: {error}")
-            return jsonify({"error": "Failed to process reset request."}), 500
+            return jsonify({"error": "Failed to store reset code. Please try again."}), 500
         
         # Send email
         email_sent = send_email_async(email, "Your Password Reset Code - WhatsApp Messenger Pro", email_body)
@@ -356,7 +429,7 @@ def reset_password():
         code = data.get('code')
         new_password = data.get('new_password')
         
-        logger.info(f"🔄 Password reset attempt for: {email}")
+        logger.info(f"🔄 Password reset attempt for: {email}, code: {code}")
         
         if not all([email, code, new_password]):
             return jsonify({"error": "All fields are required."}), 400
@@ -368,9 +441,10 @@ def reset_password():
         resets, error = supabase.select('password_resets', filters={'email': email, 'token': code})
         if error:
             logger.error(f"Reset password database error: {error}")
-            return jsonify({"error": "Database error."}), 500
+            return jsonify({"error": "Database error. Please try again."}), 500
             
         if not resets:
+            logger.warning(f"No reset code found for email: {email}, code: {code}")
             return jsonify({"error": "Invalid or expired reset code."}), 400
         
         reset_record = resets[0]
@@ -382,7 +456,8 @@ def reset_password():
         if expires_at < datetime.utcnow():
             # Delete expired code
             supabase.delete('password_resets', {'id': reset_record['id']})
-            return jsonify({"error": "Reset code has expired."}), 400
+            logger.warning(f"Expired reset code for: {email}")
+            return jsonify({"error": "Reset code has expired. Please request a new one."}), 400
         
         # Update password in users table
         new_password_hash = hash_password(new_password)
@@ -390,7 +465,8 @@ def reset_password():
         
         if error:
             logger.error(f"Password update failed: {error}")
-            return jsonify({"error": "Failed to update password."}), 500        
+            return jsonify({"error": "Failed to update password. Please try again."}), 500
+        
         # Delete used reset code
         supabase.delete('password_resets', {'id': reset_record['id']})
         
@@ -402,7 +478,7 @@ def reset_password():
         
     except Exception as e:
         logger.error(f"Reset password exception: {str(e)}")
-        return jsonify({"error": "Internal server error."}), 500
+        return jsonify({"error": "Internal server error. Please try again."}), 500
 
 @app.route('/test_email', methods=['POST'])
 def test_email():
@@ -432,6 +508,24 @@ def test_email():
     except Exception as e:
         logger.error(f"Test email failed: {str(e)}")
         return jsonify({"error": f"Test email failed: {str(e)}"}), 500
+
+@app.route('/check_tables', methods=['GET'])
+def check_tables():
+    """Check if required tables exist"""
+    try:
+        # Check users table
+        users, users_error = supabase.select('users', limit=1)
+        password_resets, pr_error = supabase.select('password_resets', limit=1)
+        
+        return jsonify({
+            "users_table_exists": users is not None and users_error is None,
+            "password_resets_table_exists": password_resets is not None and pr_error is None,
+            "users_error": users_error,
+            "password_resets_error": pr_error
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/health', methods=['GET'])
 def health_check():
