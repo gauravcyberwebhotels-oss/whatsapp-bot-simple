@@ -334,256 +334,257 @@
     </div>
 
     <script>
-    let userSecretKey = '';
-    let userEmail = '';
-    let resetEmail = '';
-    
-    // ⚠️ IMPORTANT: Replace with your actual Render URL
-    const API_BASE_URL = 'https://whatsapp-bot-main-2r4u.onrender.com'; // ← CHANGE THIS!
-    
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    const statusDiv = document.getElementById('status');
-    
-    function showStatus(message, type = 'error') {
-        statusDiv.textContent = message;
-        statusDiv.className = `status status-${type}`;
-        statusDiv.style.display = 'block';
-        setTimeout(() => {
-            statusDiv.style.display = 'none';
-        }, 5000);
-    }
-    
-    async function apiRequest(endpoint, options = {}) {
-        loadingOverlay.style.display = 'flex';
-        try {
-            // ✅ FIX: Use full URL with your Render domain
-            const fullUrl = `${API_BASE_URL}${endpoint}`;
-            console.log(`🌐 Making request to: ${fullUrl}`);
+        let userSecretKey = '';
+        let userEmail = '';
+        let resetEmail = '';
+        
+        // ⚠️ IMPORTANT: Replace with your actual Render URL
+        const API_BASE_URL = 'https://whatsapp-bot-main-2r4u.onrender.com'; // ← CHANGE THIS TO YOUR ACTUAL RENDER URL!
+        
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const statusDiv = document.getElementById('status');
+        
+        function showStatus(message, type = 'error') {
+            statusDiv.textContent = message;
+            statusDiv.className = `status status-${type}`;
+            statusDiv.style.display = 'block';
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        async function apiRequest(endpoint, options = {}) {
+            loadingOverlay.style.display = 'flex';
+            try {
+                // Use full URL with your Render domain
+                const fullUrl = `${API_BASE_URL}${endpoint}`;
+                console.log(`🌐 Making request to: ${fullUrl}`);
+                
+                const response = await fetch(fullUrl, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || `Server Error ${response.status}`);
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('❌ API Request failed:', error);
+                showStatus(error.message, 'error');
+                return null;
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+        
+        async function handleRegister() {
+            const email = document.getElementById('registerEmail').value.trim().toLowerCase();
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirmPassword').value;
             
-            const response = await fetch(fullUrl, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...options.headers
-                },
-                ...options
+            if (password !== confirmPassword) {
+                showStatus('Passwords do not match.', 'error');
+                return;
+            }
+            
+            if (password.length < 8) {
+                showStatus('Password must be at least 8 characters long.', 'error');
+                return;
+            }
+            
+            console.log('📝 Attempting registration for:', email);
+            const result = await apiRequest('/register', {
+                method: 'POST',
+                body: JSON.stringify({ email, password })
             });
             
-            const data = await response.json();
+            if (result) {
+                showStatus(result.message, 'success');
+                showLogin();
+            }
+        }
+        
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+            const password = document.getElementById('loginPassword').value;
             
-            if (!response.ok) {
-                throw new Error(data.error || `Server Error ${response.status}`);
+            console.log('🔐 Attempting login for:', email);
+            const result = await apiRequest('/login', {
+                method: 'POST',
+                body: JSON.stringify({ email, password })
+            });
+            
+            if (result) {
+                userEmail = email;
+                userSecretKey = result.secret_key;
+                showDashboard(result);
+                showStatus('Login successful!', 'success');
+            }
+        }
+        
+        async function handleSaveSpreadsheet() {
+            const spreadsheetUrl = document.getElementById('spreadsheetUrl').value.trim();
+            
+            if (!spreadsheetUrl.startsWith('https://docs.google.com/spreadsheets/')) {
+                showStatus('Please enter a valid Google Sheets URL.', 'error');
+                return;
             }
             
-            return data;
-        } catch (error) {
-            console.error('❌ API Request failed:', error);
-            showStatus(error.message, 'error');
-            return null;
-        } finally {
-            loadingOverlay.style.display = 'none';
-        }
-    }
-    
-    async function handleRegister() {
-        const email = document.getElementById('registerEmail').value.trim().toLowerCase();
-        const password = document.getElementById('registerPassword').value;
-        const confirmPassword = document.getElementById('registerConfirmPassword').value;
-        
-        if (password !== confirmPassword) {
-            showStatus('Passwords do not match.', 'error');
-            return;
+            const result = await apiRequest('/save_spreadsheet', {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    secret_key: userSecretKey, 
+                    spreadsheet_url: spreadsheetUrl 
+                })
+            });
+            
+            if (result) {
+                showStatus(result.message, 'success');
+                document.getElementById('spreadsheetStatus').textContent = `✅ ${spreadsheetUrl}`;
+            }
         }
         
-        if (password.length < 8) {
-            showStatus('Password must be at least 8 characters long.', 'error');
-            return;
+        async function handleForgotPassword() {
+            const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
+            
+            if (!email) {
+                showStatus('Please enter an email address.', 'error');
+                return;
+            }
+            
+            resetEmail = email;
+            const result = await apiRequest('/forgot_password', {
+                method: 'POST',
+                body: JSON.stringify({ email })
+            });
+            
+            if (result) {
+                showStatus(result.message, 'success');
+                hideModals();
+                document.getElementById('resetPasswordModal').style.display = 'flex';
+            }
         }
         
-        console.log('📝 Attempting registration for:', email);
-        const result = await apiRequest('/register', {
-            method: 'POST',
-            body: JSON.stringify({ email, password })
-        });
-        
-        if (result) {
-            showStatus(result.message, 'success');
-            showLogin();
-        }
-    }
-    
-    async function handleLogin() {
-        const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-        const password = document.getElementById('loginPassword').value;
-        
-        console.log('🔐 Attempting login for:', email);
-        const result = await apiRequest('/login', {
-            method: 'POST',
-            body: JSON.stringify({ email, password })
-        });
-        
-        if (result) {
-            userEmail = email;
-            userSecretKey = result.secret_key;
-            showDashboard(result);
-            showStatus('Login successful!', 'success');
-        }
-    }
-    
-    async function handleSaveSpreadsheet() {
-        const spreadsheetUrl = document.getElementById('spreadsheetUrl').value.trim();
-        
-        if (!spreadsheetUrl.startsWith('https://docs.google.com/spreadsheets/')) {
-            showStatus('Please enter a valid Google Sheets URL.', 'error');
-            return;
+        async function handleResetPassword() {
+            const code = document.getElementById('resetCode').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmNewPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                showStatus("Passwords do not match.", 'error');
+                return;
+            }
+            
+            if (newPassword.length < 8) {
+                showStatus("Password must be at least 8 characters.", 'error');
+                return;
+            }
+            
+            const result = await apiRequest('/reset_password', {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    email: resetEmail, 
+                    code: code, 
+                    new_password: newPassword 
+                })
+            });
+            
+            if (result) {
+                showStatus(result.message, 'success');
+                hideModals();
+                showLogin();
+            }
         }
         
-        const result = await apiRequest('/save_spreadsheet', {
-            method: 'POST',
-            body: JSON.stringify({ 
-                secret_key: userSecretKey, 
-                spreadsheet_url: spreadsheetUrl 
-            })
-        });
-        
-        if (result) {
-            showStatus(result.message, 'success');
-            document.getElementById('spreadsheetStatus').textContent = `✅ ${spreadsheetUrl}`;
-        }
-    }
-    
-    async function handleForgotPassword() {
-        const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
-        
-        if (!email) {
-            showStatus('Please enter an email address.', 'error');
-            return;
-        }
-        
-        resetEmail = email;
-        const result = await apiRequest('/forgot_password', {
-            method: 'POST',
-            body: JSON.stringify({ email })
-        });
-        
-        if (result) {
-            showStatus(result.message, 'success');
-            hideModals();
-            document.getElementById('resetPasswordModal').style.display = 'flex';
-        }
-    }
-    
-    async function handleResetPassword() {
-        const code = document.getElementById('resetCode').value;
-        const newPassword = document.getElementById('newPassword').value;
-        const confirmPassword = document.getElementById('confirmNewPassword').value;
-        
-        if (newPassword !== confirmPassword) {
-            showStatus("Passwords do not match.", 'error');
-            return;
-        }
-        
-        if (newPassword.length < 8) {
-            showStatus("Password must be at least 8 characters.", 'error');
-            return;
-        }
-        
-        const result = await apiRequest('/reset_password', {
-            method: 'POST',
-            body: JSON.stringify({ 
-                email: resetEmail, 
-                code: code, 
-                new_password: newPassword 
-            })
-        });
-        
-        if (result) {
-            showStatus(result.message, 'success');
-            hideModals();
-            showLogin();
-        }
-    }
-    
-    function showDashboard(userData) {
-        document.getElementById('authSection').style.display = 'none';
-        document.getElementById('dashboardSection').style.display = 'block';
-        document.getElementById('logoutBtn').style.display = 'block';
-        
-        document.getElementById('userEmail').textContent = userEmail;
-        
-        const lastLoginElement = document.getElementById('userLastLogin');
-        if (userData.last_login_at) {
-            lastLoginElement.textContent = new Date(userData.last_login_at).toLocaleString();
-        } else {
-            lastLoginElement.textContent = 'Welcome! First time login.';
-        }
-        
-        const spreadsheetUrl = userData.spreadsheet_url;
-        const spreadsheetStatus = document.getElementById('spreadsheetStatus');
-        if (spreadsheetUrl) {
-            spreadsheetStatus.textContent = `✅ ${spreadsheetUrl}`;
-            document.getElementById('spreadsheetUrl').value = spreadsheetUrl;
-        } else {
-            spreadsheetStatus.textContent = '🟡 No spreadsheet URL saved yet.';
-        }
-    }
-    
-    function logout() {
-        userSecretKey = '';
-        userEmail = '';
-        resetEmail = '';
-        
-        document.getElementById('dashboardSection').style.display = 'none';
-        document.getElementById('logoutBtn').style.display = 'none';
-        document.getElementById('authSection').style.display = 'block';
-        
-        showLogin();
-        showStatus('Logged out successfully.', 'success');
-    }
-    
-    function hideModals() {
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.style.display = 'none';
-        });
-    }
-    
-    function showForgotPasswordModal() {
-        hideModals();
-        document.getElementById('forgotPasswordModal').style.display = 'flex';
-    }
-    
-    function showLogin() {
-        document.getElementById('registerForm').style.display = 'none';
-        document.getElementById('loginForm').style.display = 'block';
-        hideModals();
-    }
-    
-    function showRegister() {
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('registerForm').style.display = 'block';
-        hideModals();
-    }
-    
-    // Close modals when clicking outside
-    window.onclick = function(event) {
-        if (event.target.classList.contains('modal')) {
-            hideModals();
-        }
-    }
-    
-    // Test connection on page load
-    window.addEventListener('load', async () => {
-        console.log('🚀 Page loaded, testing API connection...');
-        try {
-            const response = await fetch(`${API_BASE_URL}/health`);
-            if (response.ok) {
-                console.log('✅ Backend is reachable');
+        function showDashboard(userData) {
+            document.getElementById('authSection').style.display = 'none';
+            document.getElementById('dashboardSection').style.display = 'block';
+            document.getElementById('logoutBtn').style.display = 'block';
+            
+            document.getElementById('userEmail').textContent = userEmail;
+            
+            const lastLoginElement = document.getElementById('userLastLogin');
+            if (userData.last_login_at) {
+                lastLoginElement.textContent = new Date(userData.last_login_at).toLocaleString();
             } else {
-                console.error('❌ Backend health check failed');
+                lastLoginElement.textContent = 'Welcome! First time login.';
             }
-        } catch (error) {
-            console.error('❌ Cannot reach backend:', error);
+            
+            const spreadsheetUrl = userData.spreadsheet_url;
+            const spreadsheetStatus = document.getElementById('spreadsheetStatus');
+            if (spreadsheetUrl) {
+                spreadsheetStatus.textContent = `✅ ${spreadsheetUrl}`;
+                document.getElementById('spreadsheetUrl').value = spreadsheetUrl;
+            } else {
+                spreadsheetStatus.textContent = '🟡 No spreadsheet URL saved yet.';
+            }
         }
-    });
-</script>
+        
+        function logout() {
+            userSecretKey = '';
+            userEmail = '';
+            resetEmail = '';
+            
+            document.getElementById('dashboardSection').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('authSection').style.display = 'block';
+            
+            showLogin();
+            showStatus('Logged out successfully.', 'success');
+        }
+        
+        function hideModals() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.style.display = 'none';
+            });
+        }
+        
+        function showForgotPasswordModal() {
+            hideModals();
+            document.getElementById('forgotPasswordModal').style.display = 'flex';
+        }
+        
+        function showLogin() {
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'block';
+            hideModals();
+        }
+        
+        function showRegister() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            hideModals();
+        }
+        
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                hideModals();
+            }
+        }
+        
+        // Test connection on page load
+        window.addEventListener('load', async () => {
+            console.log('🚀 Page loaded, testing API connection...');
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                if (response.ok) {
+                    console.log('✅ Backend is reachable');
+                } else {
+                    console.error('❌ Backend health check failed');
+                }
+            } catch (error) {
+                console.error('❌ Cannot reach backend:', error);
+                showStatus('Cannot connect to server. Please check your internet connection.', 'error');
+            }
+        });
+    </script>
 </body>
 </html>
