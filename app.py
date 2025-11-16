@@ -22,11 +22,17 @@ limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["200 per
 
 class SupabaseClient:
     def __init__(self, url, key): 
-        self.url, self.key, self.headers = url, key, {'apikey': key, 'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'}
+        self.url = url
+        self.key = key
+        if not key:
+            logger.error("❌ SUPABASE_KEY is missing or empty! Check Render env vars.")
+        else:
+            logger.info(f"✅ Supabase key loaded: {len(key)} chars")  # Safe: no key printed
+        self.headers = {'apikey': key, 'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'}
     def _make_request(self, method, endpoint, **kwargs):
         try:
             r = requests.request(method, f"{self.url}/rest/v1/{endpoint}", headers=kwargs.pop('headers', self.headers), timeout=30, **kwargs)
-            if r.status_code == 406:  # NEW: Handle empty single-object queries (no row found)
+            if r.status_code == 406:  # Handle empty single-object queries (no row found)
                 return None, None  # Treat as success with no data (no error)
             r.raise_for_status()
             if r.status_code == 204: return {"status": "success"}, None
