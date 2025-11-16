@@ -1,4 +1,4 @@
-# app.py (FULLY UPDATED - ERROR-FREE VERSION WITH IMPROVED DB HANDLING)
+# app.py (FULLY FIXED - ROUTING ORDER + DB ERROR HANDLING)
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -15,12 +15,15 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from config import Config
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
 app = Flask(__name__, static_folder='.', static_url_path='')
 app.config.from_object(Config)
 CORS(app, origins=['*'])
 limiter = Limiter(app=app, key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
+
 class SupabaseClient:
     def __init__(self, url, key):
         self.url = url
@@ -31,22 +34,19 @@ class SupabaseClient:
             'Content-Type': 'application/json',
             'Prefer': 'return=minimal'
         }
+
     def _make_request(self, method, endpoint, **kwargs):
         try:
             url = f"{self.url}/rest/v1/{endpoint}"
             logger.info(f"Making {method} request to: {url}")
            
             response = requests.request(
-                method,
-                url,
-                headers=self.headers,
-                timeout=30,
-                **kwargs
+                method, url, headers=self.headers, timeout=30, **kwargs
             )
            
             logger.info(f"Response status: {response.status_code}")
            
-            if response.status_code == 204: # No content
+            if response.status_code == 204:
                 return {"status": "success"}, None
                
             response.raise_for_status()
@@ -70,11 +70,14 @@ class SupabaseClient:
         except Exception as e:
             logger.error(f"Request exception: {str(e)}")
             return None, str(e)
-    def select(self, table, filters=None, single=False):
+
+    def select(self, table, filters=None, single=False, limit=None):
         try:
             params = {}
             if filters:
                 params = {f"{k}": f"eq.{v}" for k, v in filters.items()}
+            if limit:
+                params['limit'] = limit
            
             headers = self.headers.copy()
             if single:
@@ -83,18 +86,13 @@ class SupabaseClient:
             url = f"{self.url}/rest/v1/{table}"
             logger.info(f"SELECT from {table} with params: {params}")
            
-            response = requests.get(
-                url,
-                headers=headers,
-                params=params,
-                timeout=30
-            )
+            response = requests.get(url, headers=headers, params=params, timeout=30)
            
             logger.info(f"SELECT response status: {response.status_code}")
            
             if response.status_code == 404:
-                logger.warning(f"Table {table} not found or empty - this may indicate setup issue")
-                return [], None # Table doesn't exist or no data
+                logger.warning(f"Table {table} not found or empty - setup issue")
+                return [], None
                
             response.raise_for_status()
            
@@ -108,7 +106,7 @@ class SupabaseClient:
                
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
-                logger.warning(f"Table {table} not found or empty - this may indicate setup issue")
+                logger.warning(f"Table {table} not found or empty - setup issue")
                 return [], None
             error_msg = f"Select failed: {e.response.status_code} - {e.response.text[:200]}"
             logger.error(error_msg)
@@ -117,8 +115,9 @@ class SupabaseClient:
         except Exception as e:
             logger.error(f"Select exception: {str(e)}")
             return None, str(e)
+
     def insert(self, table, data):
-        logger.info(f"INSERT into {table}: { {k: '***' if 'password' in k.lower() or 'token' in k.lower() else v for k, v in data.items()} }")
+        logger.info(f"INSERT into {table}: {{{', '.join([f'{k}: ***' if 'password' in k.lower() or 'token' in k.lower() else f'{k}: {v}' for k, v in data.items()])}}}")
         return self._make_request('POST', table, json=data)
    
     def update(self, table, filters, data):
@@ -130,77 +129,73 @@ class SupabaseClient:
         filter_str = '&'.join([f'{k}=eq.{v}' for k,v in filters.items()])
         logger.info(f"DELETE from {table} WHERE {filter_str}")
         return self._make_request('DELETE', f"{table}?{filter_str}")
+
 supabase = SupabaseClient(Config.SUPABASE_URL, Config.SUPABASE_KEY)
 logger.info("✅ Supabase client initialized.")
+
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
+
 def send_email_async(to_email, subject, body):
-    """Send email in a separate thread to avoid timeout"""
     def send():
         try:
-            # Create message
             msg = MIMEMultipart()
             msg['Subject'] = subject
             msg['From'] = Config.EMAIL_ADDRESS
             msg['To'] = to_email
-           
-            # Add HTML body
             msg.attach(MIMEText(body, 'html'))
            
-            logger.info(f"🔧 Attempting to send email to {to_email}")
-            logger.info(f"🔧 Using SMTP: {Config.SMTP_SERVER}:{Config.SMTP_PORT}")
-            logger.info(f"🔧 From: {Config.EMAIL_ADDRESS}")
-           
-            # Create SMTP connection
+            logger.info(f"🔧 Sending email to {to_email}")
             server = smtplib.SMTP(Config.SMTP_SERVER, Config.SMTP_PORT, timeout=30)
-            server.set_debuglevel(1) # Enable verbose debug output
-           
-            # Identify ourselves to the server
+            server.set_debuglevel(1)
             server.ehlo()
-           
-            # Start TLS encryption if available
             if server.has_extn('STARTTLS'):
                 server.starttls()
                 server.ehlo()
-                logger.info("✅ TLS connection established")
-           
-            # Login to the server
-            logger.info("🔧 Attempting to login...")
+                logger.info("✅ TLS established")
             server.login(Config.EMAIL_ADDRESS, Config.EMAIL_PASSWORD)
             logger.info("✅ SMTP login successful")
-           
-            # Send email
             server.send_message(msg)
             server.quit()
-           
-            logger.info(f"✅ Email sent successfully to {to_email}")
+            logger.info(f"✅ Email sent to {to_email}")
             return True
-           
         except smtplib.SMTPAuthenticationError as e:
-            logger.error(f"❌ SMTP Authentication Failed: {str(e)}")
-            logger.error("💡 Please check:")
-            logger.error(" 1. You're using an App Password (not your Gmail password)")
-            logger.error(" 2. 2-Factor Authentication is enabled in Google Account")
-            logger.error(" 3. App Password is generated for 'Mail'")
-            return False
-        except smtplib.SMTPException as e:
-            logger.error(f"❌ SMTP Error: {str(e)}")
+            logger.error(f"❌ SMTP Auth Failed: {str(e)} - Check App Password & 2FA")
             return False
         except Exception as e:
-            logger.error(f"❌ FAILED TO SEND EMAIL to {to_email}. Error: {str(e)}")
+            logger.error(f"❌ Email failed: {str(e)}")
             return False
    
-    # Run in background thread
     thread = threading.Thread(target=send)
     thread.daemon = True
     thread.start()
     return True
+
+# API ROUTES FIRST
 @app.route('/')
 def serve_frontend():
     return send_from_directory('.', 'index.html')
-@app.route('/<path:path>')
-def serve_static(path):
-    return send_from_directory('.', path)
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "healthy", "timestamp": datetime.utcnow().isoformat()})
+
+@app.route('/check_tables', methods=['GET'])
+def check_tables():
+    try:
+        users, users_error = supabase.select('users', limit=1)
+        password_resets, pr_error = supabase.select('password_resets', limit=1)
+       
+        return jsonify({
+            "users_table_exists": users_error is None,
+            "password_resets_table_exists": pr_error is None,
+            "users_error": users_error,
+            "password_resets_error": pr_error
+        })
+    except Exception as e:
+        logger.error(f"Check tables error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/register', methods=['POST'])
 def register():
     try:
@@ -212,23 +207,21 @@ def register():
         password = data.get('password')
        
         if not all([email, password]):
-            return jsonify({"error": "Email and password are required."}), 400
+            return jsonify({"error": "Email and password required."}), 400
        
         if len(password) < 8:
             return jsonify({"error": "Password must be at least 8 characters."}), 400
        
-        # Check if user already exists
         existing_user, error = supabase.select('users', filters={'email': email}, single=True)
         if error:
-            logger.error(f"Registration check error: {error}")
-            if "404" in str(error) or "not found" in str(error).lower():
-                return jsonify({"error": "Database tables not set up. Please create 'users' table in Supabase."}), 500
+            logger.error(f"Reg check error: {error}")
+            if "404" in str(error).lower() or "not found" in str(error).lower():
+                return jsonify({"error": "Database tables not set up. Create 'users' in Supabase."}), 500
             return jsonify({"error": "Database error during registration. Check logs."}), 500
            
         if existing_user:
             return jsonify({"error": "Email already registered."}), 400
        
-        # Create new user
         user_data = {
             'email': email,
             'password_hash': hash_password(password),
@@ -239,17 +232,17 @@ def register():
        
         result, error = supabase.insert('users', user_data)
         if error:
-            logger.error(f"Registration insert error: {error}")
-            if "404" in str(error) or "not found" in str(error).lower():
-                return jsonify({"error": "Database tables not set up. Please create 'users' table in Supabase."}), 500
+            logger.error(f"Reg insert error: {error}")
+            if "404" in str(error).lower() or "not found" in str(error).lower():
+                return jsonify({"error": "Database tables not set up. Create 'users' in Supabase."}), 500
             return jsonify({"error": "Database error during registration. Check logs."}), 500
        
-        logger.info(f"New user registered: {email}")
+        logger.info(f"New user: {email}")
         return jsonify({"message": "Registration successful. You can now log in."}), 201
-       
     except Exception as e:
-        logger.error(f"Registration exception: {str(e)}")
+        logger.error(f"Reg exception: {str(e)}")
         return jsonify({"error": "Internal server error."}), 500
+
 @app.route('/login', methods=['POST'])
 def login():
     try:
@@ -261,13 +254,13 @@ def login():
         password = data.get('password')
        
         if not all([email, password]):
-            return jsonify({"error": "Email and password are required."}), 400
+            return jsonify({"error": "Email and password required."}), 400
        
         user_data, error = supabase.select('users', filters={'email': email}, single=True)
        
         if error:
-            logger.error(f"Login database error: {error}")
-            if "404" in str(error) or "not found" in str(error).lower():
+            logger.error(f"Login DB error: {error}")
+            if "404" in str(error).lower() or "not found" in str(error).lower():
                 return jsonify({"error": "Database not initialized. Contact support."}), 500
             return jsonify({"error": "Database error."}), 500
            
@@ -277,16 +270,16 @@ def login():
         if user_data.get('password_hash') != hash_password(password):
             return jsonify({"error": "Invalid email or password."}), 401
        
-        logger.info(f"User logged in: {email}")
+        logger.info(f"Login: {email}")
         return jsonify({
             'secret_key': user_data.get('secret_key'),
             'credits': user_data.get('credits', 100),
             'spreadsheet_url': user_data.get('spreadsheet_url', '')
         })
-       
     except Exception as e:
         logger.error(f"Login exception: {str(e)}")
         return jsonify({"error": "Internal server error."}), 500
+
 @app.route('/save_spreadsheet', methods=['POST'])
 def save_spreadsheet():
     try:
@@ -301,31 +294,29 @@ def save_spreadsheet():
             return jsonify({"error": "Authentication required."}), 401
        
         if not spreadsheet_url:
-            return jsonify({"error": "Spreadsheet URL is required."}), 400
+            return jsonify({"error": "Spreadsheet URL required."}), 400
        
-        # Verify user exists
         user_data, error = supabase.select('users', filters={'secret_key': secret_key}, single=True)
         if error:
-            logger.error(f"Spreadsheet save database error: {error}")
-            if "404" in str(error) or "not found" in str(error).lower():
-                return jsonify({"error": "Database not initialized. Contact support."}), 500
+            logger.error(f"Spreadsheet DB error: {error}")
+            if "404" in str(error).lower() or "not found" in str(error).lower():
+                return jsonify({"error": "Database not initialized."}), 500
             return jsonify({"error": "Database error."}), 500
            
         if not user_data:
             return jsonify({"error": "Invalid authentication."}), 401
        
-        # Update spreadsheet URL
         result, error = supabase.update('users', {'secret_key': secret_key}, {'spreadsheet_url': spreadsheet_url})
         if error:
             logger.error(f"Spreadsheet update error: {error}")
-            return jsonify({"error": "Failed to save spreadsheet URL. Check logs."}), 500
+            return jsonify({"error": "Failed to save. Check logs."}), 500
        
-        logger.info(f"Spreadsheet URL saved for user: {user_data.get('email')}")
-        return jsonify({"message": "Spreadsheet URL saved successfully."})
-       
+        logger.info(f"Spreadsheet saved for {user_data.get('email')}")
+        return jsonify({"message": "Spreadsheet URL saved."})
     except Exception as e:
-        logger.error(f"Save spreadsheet exception: {str(e)}")
+        logger.error(f"Spreadsheet exception: {str(e)}")
         return jsonify({"error": "Internal server error."}), 500
+
 @app.route('/forgot_password', methods=['POST'])
 @limiter.limit("3 per hour")
 def forgot_password():
@@ -336,53 +327,39 @@ def forgot_password():
            
         email = data.get('email')
         if not email:
-            return jsonify({"error": "Email is required."}), 400
+            return jsonify({"error": "Email required."}), 400
        
-        logger.info(f"🔑 Password reset requested for: {email}")
+        logger.info(f"Reset requested for: {email}")
        
-        # Check if user exists
         user, error = supabase.select('users', filters={'email': email}, single=True)
         if error:
-            logger.error(f"Forgot password database error: {error}")
-            if "404" in str(error) or "not found" in str(error).lower():
-                return jsonify({"error": "Database not initialized. Contact support."}), 500
+            if "404" in str(error).lower() or "not found" in str(error).lower():
+                return jsonify({"error": "Database not initialized."}), 500
             return jsonify({"error": "Database error."}), 500
            
         if not user:
-            # Return success even if user doesn't exist for security
-            logger.info(f"No user found with email: {email}")
-            return jsonify({"message": "If an account with that email exists, a reset code has been sent."})
+            return jsonify({"message": "If account exists, reset code sent."})
        
-        # Generate reset code
         reset_code = str(random.randint(100000, 999999))
         expires_at = datetime.utcnow() + timedelta(hours=1)
        
-        # Create email body
         email_body = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <html><body style="font-family: Arial; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
                 <h2 style="color: #667eea; text-align: center;">Password Reset Code</h2>
-                <p>Hello,</p>
-                <p>You requested a password reset for your WhatsApp Messenger Pro account.</p>
+                <p>Hello,</p><p>You requested a password reset.</p>
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;">
                     <h3 style="margin: 0; color: #667eea; font-size: 24px; letter-spacing: 2px;">{reset_code}</h3>
                 </div>
-                <p>Enter this 6-digit code in the reset password form to set a new password.</p>
-                <p><strong>This code will expire in 1 hour.</strong></p>
-                <p>If you didn't request this reset, please ignore this email.</p>
+                <p>Enter this code to reset. Expires in 1 hour.</p><p>If not you, ignore.</p>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                <p style="font-size: 12px; color: #666;">This is an automated message from WhatsApp Messenger Pro.</p>
+                <p style="font-size: 12px; color: #666;">Automated from WhatsApp Messenger Pro.</p>
             </div>
-        </body>
-        </html>
+        </body></html>
         """
        
-        # Store reset code first (before attempting to send email)
-        # Delete any existing reset codes for this email
         supabase.delete('password_resets', {'email': email})
        
-        # Store new reset code
         reset_data = {
             'email': email,
             'token': reset_code,
@@ -392,28 +369,19 @@ def forgot_password():
        
         result, error = supabase.insert('password_resets', reset_data)
         if error:
-            logger.error(f"Failed to store reset token: {error}")
-            if "404" in str(error) or "not found" in str(error).lower():
-                return jsonify({"error": "Database not initialized. Contact support."}), 500
-            return jsonify({"error": "Failed to store reset code. Please try again."}), 500
+            logger.error(f"Reset insert error: {error}")
+            if "404" in str(error).lower() or "not found" in str(error).lower():
+                return jsonify({"error": "Database not initialized."}), 500
+            return jsonify({"error": "Failed to store code."}), 500
        
-        # Send email
-        email_sent = send_email_async(email, "Your Password Reset Code - WhatsApp Messenger Pro", email_body)
+        email_sent = send_email_async(email, "Password Reset Code - WhatsApp Messenger Pro", email_body)
+        logger.info(f"Reset code {reset_code} for {email} - sent: {email_sent}")
        
-        if email_sent:
-            logger.info(f"✅ Reset code generated and email sent to {email}: {reset_code}")
-        else:
-            logger.warning(f"⚠️ Reset code generated but email may not have been sent to {email}: {reset_code}")
-       
-        # For development/testing, always return success but don't show code
-        return jsonify({
-            "message": "If an account exists, a reset code has been sent to your email.",
-            "email_sent": email_sent
-        })
-       
+        return jsonify({"message": "If account exists, reset code sent.", "email_sent": email_sent})
     except Exception as e:
-        logger.error(f"Forgot password exception: {str(e)}")
+        logger.error(f"Forgot exception: {str(e)}")
         return jsonify({"error": "Internal server error."}), 500
+
 @app.route('/reset_password', methods=['POST'])
 def reset_password():
     try:
@@ -425,105 +393,68 @@ def reset_password():
         code = data.get('code')
         new_password = data.get('new_password')
        
-        logger.info(f"🔄 Password reset attempt for: {email}, code: {code}")
-       
         if not all([email, code, new_password]):
-            return jsonify({"error": "All fields are required."}), 400
+            return jsonify({"error": "All fields required."}), 400
        
         if len(new_password) < 8:
-            return jsonify({"error": "Password must be at least 8 characters."}), 400
+            return jsonify({"error": "Password must be 8+ characters."}), 400
        
-        # Find valid reset code
         resets, error = supabase.select('password_resets', filters={'email': email, 'token': code})
         if error:
-            logger.error(f"Reset password database error: {error}")
-            if "404" in str(error) or "not found" in str(error).lower():
-                return jsonify({"error": "Database not initialized. Contact support."}), 500
-            return jsonify({"error": "Database error. Please try again."}), 500
+            logger.error(f"Reset DB error: {error}")
+            if "404" in str(error).lower() or "not found" in str(error).lower():
+                return jsonify({"error": "Database not initialized."}), 500
+            return jsonify({"error": "Database error."}), 500
            
         if not resets:
-            logger.warning(f"No reset code found for email: {email}, code: {code}")
-            return jsonify({"error": "Invalid or expired reset code."}), 400
+            return jsonify({"error": "Invalid/expired code."}), 400
        
         reset_record = resets[0]
-       
-        # Parse expiration time
         expires_at_str = reset_record['expires_at'].replace('Z', '+00:00')
         expires_at = datetime.fromisoformat(expires_at_str)
        
         if expires_at < datetime.utcnow():
-            # Delete expired code
             supabase.delete('password_resets', {'id': reset_record['id']})
-            logger.warning(f"Expired reset code for: {email}")
-            return jsonify({"error": "Reset code has expired. Please request a new one."}), 400
+            return jsonify({"error": "Code expired. Request new."}), 400
        
-        # Update password in users table
-        new_password_hash = hash_password(new_password)
-        result, error = supabase.update('users', {'email': email}, {'password_hash': new_password_hash})
-       
+        new_hash = hash_password(new_password)
+        result, error = supabase.update('users', {'email': email}, {'password_hash': new_hash})
         if error:
-            logger.error(f"Password update failed: {error}")
-            return jsonify({"error": "Failed to update password. Please try again."}), 500
+            logger.error(f"Reset update error: {error}")
+            return jsonify({"error": "Failed to update password."}), 500
        
-        # Delete used reset code
         supabase.delete('password_resets', {'id': reset_record['id']})
-       
-        # Also delete any other reset codes for this email
         supabase.delete('password_resets', {'email': email})
        
-        logger.info(f"✅ Password reset successful for: {email}")
-        return jsonify({"message": "Password has been reset successfully. You can now log in with your new password."})
-       
+        logger.info(f"Reset successful for {email}")
+        return jsonify({"message": "Password reset. Log in with new password."})
     except Exception as e:
-        logger.error(f"Reset password exception: {str(e)}")
-        return jsonify({"error": "Internal server error. Please try again."}), 500
+        logger.error(f"Reset exception: {str(e)}")
+        return jsonify({"error": "Internal server error."}), 500
+
 @app.route('/test_email', methods=['POST'])
 def test_email():
-    """Test endpoint to verify email configuration"""
     try:
         data = request.get_json()
         test_email = data.get('email', Config.EMAIL_ADDRESS)
        
-        test_body = """
-        <html>
-        <body>
-            <h2>Test Email</h2>
-            <p>This is a test email to verify your SMTP configuration is working correctly!</p>
-            <p>If you received this, your email setup is working properly.</p>
-        </body>
-        </html>
-        """
+        test_body = "<html><body><h2>Test Email</h2><p>SMTP config working!</p></body></html>"
        
-        email_sent = send_email_async(test_email, "Test Email - WhatsApp Messenger Pro", test_body)
+        email_sent = send_email_async(test_email, "Test - WhatsApp Messenger Pro", test_body)
        
         return jsonify({
-            "message": "Test email sent. Check your inbox and server logs.",
+            "message": "Test email sent. Check inbox/logs.",
             "email_sent": email_sent,
             "to_email": test_email
         })
-       
     except Exception as e:
-        logger.error(f"Test email failed: {str(e)}")
-        return jsonify({"error": f"Test email failed: {str(e)}"}), 500
-@app.route('/check_tables', methods=['GET'])
-def check_tables():
-    """Check if required tables exist"""
-    try:
-        # Check users table
-        users, users_error = supabase.select('users', limit=1)
-        password_resets, pr_error = supabase.select('password_resets', limit=1)
-       
-        return jsonify({
-            "users_table_exists": users is not None and users_error is None,
-            "password_resets_table_exists": password_resets is not None and pr_error is None,
-            "users_error": users_error,
-            "password_resets_error": pr_error
-        })
-       
-    except Exception as e:
+        logger.error(f"Test email error: {str(e)}")
         return jsonify({"error": str(e)}), 500
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({"status": "healthy", "timestamp": datetime.utcnow().isoformat()})
+
+# STATIC CATCH-ALL LAST
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory('.', path)
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 10000)), debug=Config.DEBUG)
