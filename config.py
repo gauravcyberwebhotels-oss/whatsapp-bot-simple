@@ -17,7 +17,7 @@ class Config:
     SMTP_SERVER = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
     SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
     EMAIL_ADDRESS = os.environ.get('EMAIL_ADDRESS', 'gauravcyberwebhotels@gmail.com')
-    EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD', 'mdyd lhin edma qxis')
+    EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD', 'ubat mkpc mxpv vlei')
     
-    # Debug settings - SET THIS TO True FOR TESTING
-    DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+    # Debug settings
+    DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
