@@ -1,9 +1,6 @@
-# Environment variables - NEVER COMMIT
 .env
 .env.*
 *.env
-
-# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -12,17 +9,11 @@ __pycache__/
 env/
 venv/
 .venv/
-
-# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS
 .DS_Store
 Thumbs.db
-
-# Logs
 *.log
 logs/
