@@ -1,8 +1,7 @@
-# requirements.txt
-flask
-flask-cors
-flask-limiter
-requests
-gunicorn
-python-dotenv
-sib-api-v3-sdk
+flask==2.3.3
+flask-cors==4.0.0
+flask-limiter==3.3.0
+requests==2.31.0
+gunicorn==21.2.0
+python-dotenv==1.0.0
+sib-api-v3-sdk==8.4.3
