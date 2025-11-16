@@ -85,17 +85,34 @@ def send_email_async(to_email, subject, body):
             
             logger.info(f"Attempting to send email to {to_email} via {Config.SMTP_SERVER}:{Config.SMTP_PORT}")
             
-            # Use shorter timeout for SMTP
-            server = smtplib.SMTP(Config.SMTP_SERVER, Config.SMTP_PORT, timeout=15)
+            # Enhanced SMTP connection with better error handling
+            server = smtplib.SMTP(Config.SMTP_SERVER, Config.SMTP_PORT, timeout=30)
             server.ehlo()
-            server.starttls()
-            server.ehlo()
+            
+            # Check if server supports TLS
+            if server.has_extn('STARTTLS'):
+                server.starttls()
+                server.ehlo()
+                logger.info("TLS connection established")
+            
+            # Login with credentials
             server.login(Config.EMAIL_ADDRESS, Config.EMAIL_PASSWORD)
-            server.send_message(msg)
+            logger.info("SMTP login successful")
+            
+            # Send email
+            server.sendmail(Config.EMAIL_ADDRESS, to_email, msg.as_string())
             server.quit()
             
             logger.info(f"✅ Email sent successfully to {to_email}")
             return True
+            
+        except smtplib.SMTPAuthenticationError as e:
+            logger.error(f"❌ SMTP Authentication Failed: {str(e)}")
+            logger.error("Please check your email credentials and ensure you're using an App Password")
+            return False
+        except smtplib.SMTPException as e:
+            logger.error(f"❌ SMTP Error: {str(e)}")
+            return False
         except Exception as e:
             logger.error(f"❌ FAILED TO SEND EMAIL to {to_email}. Error: {str(e)}")
             return False
@@ -104,7 +121,7 @@ def send_email_async(to_email, subject, body):
     thread = threading.Thread(target=send)
     thread.daemon = True
     thread.start()
-    return True  # Always return True immediately to avoid timeout
+    return True
 
 @app.route('/')
 def serve_frontend(): 
