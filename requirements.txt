@@ -5,3 +5,4 @@ flask-limiter
 requests
 gunicorn
 python-dotenv
+sib-api-v3-sdk
