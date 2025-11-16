@@ -1,28 +1,21 @@
-# config.py - Final Secure Version
 import os
-
+from dotenv import load_dotenv
+# Load environment variables from a .env file if it exists (for local development)
+load_dotenv()
 class Config:
     """
-    Configuration class - ALL credentials from environment variables only
+    This class reads all your secret keys and settings from the environment.
+    It does NOT import from any other part of the application.
     """
     # Flask Secret Key
-    SECRET_KEY = os.environ.get('SECRET_KEY')
-    
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'a-very-secret-key-for-dev')
     # Supabase Configuration
     SUPABASE_URL = os.environ.get('SUPABASE_URL')
     SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
-    
-    # Brevo Configuration
+  
+    # Brevo API Key for sending emails
     BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
     SENDER_EMAIL = os.environ.get('SENDER_EMAIL')
-    
-    # Flask Debug settings
+  
+    # Flask Debug settings (should be False in production)
     DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
-    
-    def validate(self):
-        """Validate that all required environment variables are set"""
-        required_vars = ['SECRET_KEY', 'SUPABASE_URL', 'SUPABASE_KEY', 'BREVO_API_KEY', 'SENDER_EMAIL']
-        missing = [var for var in required_vars if not getattr(self, var)]
-        
-        if missing:
-            raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
