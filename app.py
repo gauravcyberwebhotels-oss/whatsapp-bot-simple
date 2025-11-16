@@ -11,6 +11,7 @@ import requests
 import random
 import smtplib
 import threading
+import ssl # Add this import at the top of your file
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
@@ -141,7 +142,11 @@ logger.info("✅ Supabase client initialized.")
 def hash_password(password): 
     return hashlib.sha256(password.encode()).hexdigest()
 
+# In app.py
+
+
 def send_email_async(to_email, subject, body):
+    """Send email in a separate thread using Port 465 (SMTPS)."""
     def send():
         try:
             msg = MIMEMultipart()
@@ -150,17 +155,23 @@ def send_email_async(to_email, subject, body):
             msg['To'] = to_email
             msg.attach(MIMEText(body, 'html'))
             
-            server = smtplib.SMTP(Config.SMTP_SERVER, Config.SMTP_PORT, timeout=30)
-            server.starttls()
-            server.login(Config.EMAIL_ADDRESS, Config.EMAIL_PASSWORD)
-            server.send_message(msg)
-            server.quit()
-            logger.info(f"✅ Email sent successfully to {to_email}")
+            logger.info(f"🔧 Attempting to send email via SMTPS on Port 465")
+            
+            # Use a secure SSL context
+            context = ssl.create_default_context()
+
+            # Use smtplib.SMTP_SSL for port 465
+            with smtplib.SMTP_SSL(Config.SMTP_SERVER, Config.SMTP_PORT, context=context, timeout=30) as server:
+                server.login(Config.EMAIL_ADDRESS, Config.EMAIL_PASSWORD)
+                logger.info("✅ SMTP_SSL login successful")
+                server.send_message(msg)
+                logger.info(f"✅ Email sent successfully to {to_email}")
             return True
+            
         except Exception as e:
-            logger.error(f"❌ FAILED TO SEND EMAIL to {to_email}. Error: {str(e)}")
+            logger.error(f"❌ FAILED TO SEND EMAIL (Port 465). Error: {str(e)}")
             return False
-    
+
     thread = threading.Thread(target=send)
     thread.daemon = True
     thread.start()
