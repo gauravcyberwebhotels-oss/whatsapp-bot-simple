@@ -26,10 +26,14 @@ class SupabaseClient:
     def _make_request(self, method, endpoint, **kwargs):
         try:
             r = requests.request(method, f"{self.url}/rest/v1/{endpoint}", headers=kwargs.pop('headers', self.headers), timeout=30, **kwargs)
+            if r.status_code == 406:  # NEW: Handle empty single-object queries (no row found)
+                return None, None  # Treat as success with no data (no error)
             r.raise_for_status()
             if r.status_code == 204: return {"status": "success"}, None
             return r.json() if r.content else {"status": "success"}, None
         except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 406:  # Fallback for 406 in except
+                return None, None
             msg = e.response.json().get('message', str(e)) if e.response.content else str(e)
             logger.error(f"HTTP Error {e.response.status_code}: {msg}")
             return None, msg
